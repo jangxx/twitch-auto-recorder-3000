@@ -5,13 +5,15 @@ asynctest==0.13.0
 attrs==21.4.0
 certifi==2021.10.8
 charset-normalizer==2.0.10
+ffmpeg-python==0.2.0
 frozenlist==1.2.0
+future==0.18.2
 idna==3.3
 idna-ssl==1.1.0
 isodate==0.6.1
 lxml==4.7.1
 multidict==5.2.0
-pkg_resources==0.0.0
+pathvalidate==2.5.0
 pycountry==20.7.3
 pycryptodome==3.12.0
 PySocks==1.7.1
@@ -20,7 +22,7 @@ requests==2.27.1
 six==1.16.0
 streamlink==3.0.3
 twitchAPI==2.5.1
-typing_extensions==4.0.1
+typing-extensions==4.0.1
 urllib3==1.26.8
 websocket-client==1.2.3
 websockets==9.1
