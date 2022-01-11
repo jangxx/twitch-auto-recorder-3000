@@ -18,6 +18,8 @@ pycountry==20.7.3
 pycryptodome==3.12.0
 PySocks==1.7.1
 python-dateutil==2.8.2
+python-pushover==0.4
+PyYAML==6.0
 requests==2.27.1
 six==1.16.0
 streamlink==3.0.3
