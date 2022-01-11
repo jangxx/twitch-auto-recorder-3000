@@ -25,7 +25,7 @@ class Watch(Thread):
         self._current_stream = None
         self._stop_event = Event()
 
-        self._plugins = [p({}) for p in plugins]
+        self._plugins = [p(c) for p,c in plugins]
 
     def isRecording(self):
         return self._recording
@@ -63,7 +63,7 @@ class Watch(Thread):
             log.info(f"Stopped recording of twitch user {self._username}")
         
         if len(self._plugins) > 0:
-            runner = PluginRunner(self._plugins, recording_path, self._current_metadata)
+            runner = PluginRunner(self._plugins, "handle_recording_end", [ self._current_metadata, recording_path ])
             runner.start()
 
     def startRecording(self, metadata):
@@ -89,6 +89,10 @@ class Watch(Thread):
         self._stop_event.clear()
         self._current_stream = streams[self._quality]
         self.start()
+
+        if len(self._plugins) > 0:
+            runner = PluginRunner(self._plugins, "handle_recording_start", [ self._current_metadata ])
+            runner.start()
 
     def stopRecording(self):
         self._stop_event.set()

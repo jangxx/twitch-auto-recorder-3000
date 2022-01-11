@@ -4,10 +4,14 @@ import os
 import logging
 import re
 import importlib
+import sys
+import json
 
 from twitchAPI.twitch import Twitch
+import yaml
 
 from watch import Watch
+from config import Config
 
 def streamlink_option_type(val):
     optionRe = re.compile("^(.*?):(.*?)=(.*)$")
@@ -29,17 +33,46 @@ def streamlink_option_type(val):
     return matches.group(1), contructors[matches.group(2)](matches.group(3))
 
 parser = argparse.ArgumentParser(description="A tool to automatically download streams from twitch as streamers go live")
-parser.add_argument("--twitch-clientid", metavar="clientid", dest="clientid", help="Client ID of your twitch application", required=True)
-parser.add_argument("--twitch-secret", metavar="secret", dest="secret", help="Client Secret of your twitch application", required=True)
-parser.add_argument("-O", "--output-path", metavar="path", dest="output_path", help="Path where the recordings are stored (Default: ./recordings)", default="./recordings")
-parser.add_argument("-s", metavar="username", dest="watched_accounts", help="Add a username to the list of watched streamers. The quality can be set by writing it behind the username separated by a colon ('username:quality')", action="append", required=True)
-parser.add_argument("--update-interval", metavar="seconds", dest="update_interval", help="Update interval in seconds (Default: 120)", type=int, default=300)
+parser.add_argument("--twitch-clientid", metavar="clientid", dest="clientid", help="Client ID of your twitch application")
+parser.add_argument("--twitch-secret", metavar="secret", dest="secret", help="Client Secret of your twitch application")
+parser.add_argument("-O", "--output-path", metavar="path", dest="output_path", help="Path where the recordings are stored (Default: ./recordings)")
+parser.add_argument("-s", metavar="username", dest="watched_accounts", help="Add a username to the list of watched streamers. The quality can be set by writing it behind the username separated by a colon ('username:quality')", action="append", default=[])
+parser.add_argument("--update-interval", metavar="seconds", dest="update_interval", help="Update interval in seconds (Default: 120)", type=int)
 parser.add_argument("--log", metavar="loglevel", dest="loglevel", help="Sets the loglevel, one of CRITICAL, ERROR, WARNING, INFO, DEBUG (Default: INFO)", default="INFO")
 parser.add_argument("-c", metavar="option", dest="streamlink_options", help="Set a streamlink config option in the format optionname:type=value, e.g. '-c ipv4:bool=True' or '-c ffmpeg-ffmpeg:str=/usr/bin/ffmpeg'", action="append", default=[], type=streamlink_option_type)
 parser.add_argument("-p", metavar="plugin", dest="plugins", help="Enable a plugin", default=[], action="append")
+parser.add_argument("-C", "--config", metavar="path", dest="config_file_path", help="Optional path to a config file in YAML format")
+parser.add_argument("--print-config", dest="print_config", action="store_true", help="Print the config for debug purposes")
 
 args = parser.parse_args()
-twitch = Twitch(args.clientid, args.secret)
+config = Config()
+
+# merge config file
+if args.config_file_path is not None:
+    with open(args.config_file_path, "r") as config_file:
+        config_file_content = yaml.load(config_file, yaml.Loader)
+    config.merge(dict(config_file_content))
+
+# merge command line options
+config.merge({
+    "twitch": {
+        "clientid": args.clientid,
+        "secret": args.secret,
+    },
+    "streamers": args.watched_accounts,
+    "output_path": args.output_path,
+    "streamlink_options": args.streamlink_options,
+    "plugins": { p: {} for p in args.plugins },
+})
+
+if not config.is_valid():
+    print(f"Incomplete config, missing key: {'.'.join(config.find_missing_keys())}")
+    sys.exit(1)
+
+if args.print_config:
+    print(json.dumps(config._config, indent=4))
+
+twitch = Twitch( config.value(["twitch", "clientid"]), config.value(["twitch", "secret"]) )
 
 logging.basicConfig(level=args.loglevel, format='[%(levelname)s] %(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 log = logging.getLogger(__file__)
@@ -68,21 +101,22 @@ def get_all_streams(usernames):
 
 
 if __name__ == "__main__":
-    if not os.path.exists(args.output_path):
-        log.info(f"Output path {args.output_path} doesn't exist, creating it now...")
-        os.makedirs(args.output_path, exist_ok=True)
+    if not os.path.exists(config.value("output_path")):
+        log.info(f"Output path {config.value('output_path')} doesn't exist, creating it now...")
+        os.makedirs(config.value("output_path"), exist_ok=True)
 
+    # list of tuples (class, config)
     plugins = [
-        importlib.import_module(f"plugins.{p}").PluginExport for p in args.plugins
+        (importlib.import_module(f"plugins.{p}").PluginExport, c) for p,c in config.value("plugins").items()
     ]
 
     for p in plugins:
-        log.info(f"Loaded plugin {p.get_name()}")
+        log.info(f"Loaded plugin {p[0].get_name()}")
 
-    log.info(f"Checking twitch every {args.update_interval} seconds")
+    log.info(f"Checking twitch every {config.value('update_interval')} seconds")
 
     watches = {}
-    for username_definition in args.watched_accounts:
+    for username_definition in config.value("streamers"):
         username_definition = username_definition.split(":")
 
         if len(username_definition) == 1:
@@ -90,7 +124,7 @@ if __name__ == "__main__":
 
         [ username, quality ] = username_definition
 
-        watches[username] = Watch(username, quality, args.output_path, args.streamlink_options, plugins)
+        watches[username] = Watch(username, quality, config.value("output_path"), config.value("streamlink_options"), plugins)
         log.info(f"Watching twitch user {username}")
 
     # print(watches)
@@ -111,7 +145,7 @@ if __name__ == "__main__":
                     if is_live and not watch.isRecording():
                         watch.startRecording(streams[username])
 
-            time.sleep(args.update_interval)
+            time.sleep(config.value("update_interval"))
     except KeyboardInterrupt:
         pass
 

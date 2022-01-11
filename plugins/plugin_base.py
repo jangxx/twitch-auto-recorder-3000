@@ -6,5 +6,8 @@ class Plugin:
     def get_name():
         return "Unnamed-Plugin"
 
-    def process_recording(self, output_path, stream_metadata):
+    def handle_recording_start(self, stream_metadata):
+        pass
+
+    def handle_recording_end(self, stream_metadata, output_path):
         pass
