@@ -63,8 +63,8 @@ class Recorder(Thread):
                 while not self._stop_event.is_set():
                     data = stream_fd.read(1024)
 
-                    if random.random() < 0.00001:
-                        raise Exception("random test exception")
+                    # if random.random() < 0.00001:
+                    #     raise Exception("random test exception")
 
                     if not data: # stream has ended
                         break
