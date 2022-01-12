@@ -10,7 +10,7 @@ import json
 from twitchAPI.twitch import Twitch
 import yaml
 
-from watch import Watch
+from recorder import Recorder
 from config import Config
 
 def streamlink_option_type(val):
@@ -61,6 +61,7 @@ config.merge({
     },
     "streamers": args.watched_accounts,
     "output_path": args.output_path,
+    "update_interval": args.update_interval,
     "streamlink_options": args.streamlink_options,
     "plugins": { p: {} for p in args.plugins },
 })
@@ -99,6 +100,11 @@ def get_all_streams(usernames):
 
     return streams
 
+def recorder_has_error(recorders):
+    for recorder in recorders.values():
+        if not recorder.isRecording() and recorder.encounteredError():
+            return True
+    return False
 
 if __name__ == "__main__":
     if not os.path.exists(config.value("output_path")):
@@ -124,31 +130,46 @@ if __name__ == "__main__":
 
         [ username, quality ] = username_definition
 
-        watches[username] = Watch(username, quality, config.value("output_path"), config.value("streamlink_options"), plugins)
+        # watches[username] = Watch(username, quality, config.value("output_path"), config.value("streamlink_options"), plugins)
+        watches[username] = { "quality": quality }
         log.info(f"Watching twitch user {username}")
 
-    # print(watches)
+    recorders = {}
+    last_check = 0
 
     try:
         while True:
             streams = None
-            try:
-                streams = get_all_streams(watches.keys())
-            except Exception as ex:
-                log.error(f"Error while fetching streams: {repr(ex)}")
+
+            if (time.time() - last_check >= config.value("update_interval") or recorder_has_error(recorders)):
+                # if we see an error do another quick check to see if the streamer is still live so we don't miss much
+                last_check = time.time()
+                try:
+                    streams = get_all_streams(watches.keys())
+                except Exception as ex:
+                    log.error(f"Error while fetching streams: {repr(ex)}")
 
             if streams is not None:
                 # check if the status of any of our watches has changed
                 for username,watch in watches.items():
                     is_live = (username in streams and streams[username]["type"] == "live")
 
-                    if is_live and not watch.isRecording():
-                        watch.startRecording(streams[username])
+                    if username in recorders and not recorders[username].isRecording():
+                        if recorders[username].encounteredError(): # continue the already started recording
+                            newRecorder = recorders[username].getFreshClone()
+                            recorders[username] = newRecorder
+                            recorders[username].startRecording(streams[username])
+                        else:
+                            del recorders[username] # remove finished recorders
 
-            time.sleep(config.value("update_interval"))
+                    if is_live and not username in recorders:
+                        recorders[username] = Recorder(username, quality, config.value("output_path"), config.value("streamlink_options"), plugins)
+                        recorders[username].startRecording(streams[username])
+
+            time.sleep(1)
     except KeyboardInterrupt:
         pass
 
-    for watch in watches.values():
-        if watch.isRecording():
-            watch.stopRecording()
+    for recorder in recorders.values():
+        if recorder.isRecording():
+            recorder.stopRecording()

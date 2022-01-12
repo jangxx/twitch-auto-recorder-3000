@@ -2,8 +2,11 @@ from threading import Thread, Event
 import logging
 from datetime import datetime
 import os
-import pathvalidate
+import sys
 
+import random
+
+import pathvalidate
 import streamlink
 from streamlink.exceptions import StreamError
 
@@ -11,16 +14,20 @@ from plugin_runner import PluginRunner
 
 log = logging.getLogger(__file__)
 
-class Watch(Thread):
+class Recorder(Thread):
     def __init__(self, username, quality, output_path, streamlink_options, plugins):
         super().__init__()
+        self._launch_params = (username, quality, output_path, streamlink_options, plugins) # make it easier to create a fresh copy later in case we need one
+
         self._username = username
         self._quality = quality
         self._output_path = os.path.join(output_path, username)
         self._streamlink_options = streamlink_options
 
+        self._cloned = False
         self._recording = False
-        self._current_title = ""
+        self._encountered_error = False
+        self._current_title = None
         self._current_metadata = None
         self._current_stream = None
         self._stop_event = Event()
@@ -30,7 +37,17 @@ class Watch(Thread):
     def isRecording(self):
         return self._recording
 
+    def encounteredError(self):
+        return self._encountered_error
+
+    def getFreshClone(self):
+        newRecorder = Recorder(*self._launch_params)
+        newRecorder._current_title = self._current_title
+        newRecorder._cloned = True
+        return newRecorder
+
     def run(self) -> None:
+        stream_fd = None
         try:
             if not os.path.exists(self._output_path):
                 os.makedirs(self._output_path, exist_ok=True)
@@ -45,24 +62,30 @@ class Watch(Thread):
                 while not self._stop_event.is_set():
                     data = stream_fd.read(1024)
 
+                    # if random.random() < 0.00001:
+                    #     raise Exception("random test exception")
+
                     if not data: # stream has ended
                         break
 
                     output_file.write(data)
-
-                output_file.close()
-                stream_fd.close()
         except StreamError as e:
             log.error(f"Error while opening stream: {repr(e)}")
+            self._encountered_error = True
         except IOError as e:
             log.error(f"Error while writing output file: {repr(e)}")
+            self._encountered_error = True
         except Exception as e:
             log.error(f"Error while recording: {repr(e)}")
+            self._encountered_error = True
         finally:
-            self._recording = False
-            log.info(f"Stopped recording of twitch user {self._username}")
+            if stream_fd is not None:
+                stream_fd.close()
         
-        if len(self._plugins) > 0:
+        self._recording = False
+        log.info(f"Stopped recording of twitch user {self._username}")
+        
+        if len(self._plugins) > 0 and not self._encountered_error:
             runner = PluginRunner(self._plugins, "handle_recording_end", [ self._current_metadata, recording_path ])
             runner.start()
 
@@ -83,14 +106,19 @@ class Watch(Thread):
             log.error(f"Could not find quality '{self._quality}' in the list of available qualities. Options are: {', '.join(streams.keys())}")
             return
 
-        self._current_title = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}_{self._username}_{pathvalidate.sanitize_filename(metadata['title'])}"
+        if self._current_title is None: # otherwise we are cloned -> reuse the old title so we can append to the same file
+            if "win" in sys.platform:
+                self._current_title = f"{datetime.now().strftime('%Y-%m-%d_%H_%M_%S')}_{self._username}_{pathvalidate.sanitize_filename(metadata['title'])}"
+            else:
+                self._current_title = f"{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}_{self._username}_{pathvalidate.sanitize_filename(metadata['title'])}"
+
         self._current_metadata = metadata
 
         self._stop_event.clear()
         self._current_stream = streams[self._quality]
         self.start()
 
-        if len(self._plugins) > 0:
+        if len(self._plugins) > 0 and not self._cloned:
             runner = PluginRunner(self._plugins, "handle_recording_start", [ self._current_metadata ])
             runner.start()
 
