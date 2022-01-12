@@ -18,5 +18,10 @@ class PushoverPlugin(Plugin):
     def handle_recording_end(self, stream_metadata, output_path):
         self._client.send_message(f"Stopped recording of user {stream_metadata['user_name']}")
 
+    def handle_recording_restart(self, stream_metadata):
+        self._client.send_message(f"Restarted recording of user {stream_metadata['user_name']}")
+
+    def handle_recording_error(self, stream_metadata, output_path, error):
+        self._client.send_message(f"Encountered error while recording user {stream_metadata['user_name']}: {repr(error)}")
 
 PluginExport = PushoverPlugin

@@ -26,7 +26,7 @@ class Recorder(Thread):
 
         self._cloned = False
         self._recording = False
-        self._encountered_error = False
+        self._encountered_error = None
         self._current_title = None
         self._current_metadata = None
         self._current_stream = None
@@ -38,7 +38,7 @@ class Recorder(Thread):
         return self._recording
 
     def encounteredError(self):
-        return self._encountered_error
+        return self._encountered_error is not None
 
     def getFreshClone(self):
         newRecorder = Recorder(*self._launch_params)
@@ -48,6 +48,7 @@ class Recorder(Thread):
 
     def run(self) -> None:
         stream_fd = None
+
         try:
             if not os.path.exists(self._output_path):
                 os.makedirs(self._output_path, exist_ok=True)
@@ -62,8 +63,8 @@ class Recorder(Thread):
                 while not self._stop_event.is_set():
                     data = stream_fd.read(1024)
 
-                    # if random.random() < 0.00001:
-                    #     raise Exception("random test exception")
+                    if random.random() < 0.00001:
+                        raise Exception("random test exception")
 
                     if not data: # stream has ended
                         break
@@ -71,13 +72,13 @@ class Recorder(Thread):
                     output_file.write(data)
         except StreamError as e:
             log.error(f"Error while opening stream: {repr(e)}")
-            self._encountered_error = True
+            self._encountered_error = e
         except IOError as e:
             log.error(f"Error while writing output file: {repr(e)}")
-            self._encountered_error = True
+            self._encountered_error = e
         except Exception as e:
             log.error(f"Error while recording: {repr(e)}")
-            self._encountered_error = True
+            self._encountered_error = e
         finally:
             if stream_fd is not None:
                 stream_fd.close()
@@ -85,8 +86,11 @@ class Recorder(Thread):
         self._recording = False
         log.info(f"Stopped recording of twitch user {self._username}")
         
-        if len(self._plugins) > 0 and not self._encountered_error:
-            runner = PluginRunner(self._plugins, "handle_recording_end", [ self._current_metadata, recording_path ])
+        if len(self._plugins) > 0:
+            if self._encountered_error is None:
+                runner = PluginRunner(self._plugins, "handle_recording_end", [ self._current_metadata, recording_path ])
+            else:
+                runner = PluginRunner(self._plugins, "handle_recording_error", [ self._current_metadata, recording_path, self._encountered_error ])
             runner.start()
 
     def startRecording(self, metadata):
@@ -118,8 +122,11 @@ class Recorder(Thread):
         self._current_stream = streams[self._quality]
         self.start()
 
-        if len(self._plugins) > 0 and not self._cloned:
-            runner = PluginRunner(self._plugins, "handle_recording_start", [ self._current_metadata ])
+        if len(self._plugins) > 0:
+            if not self._cloned:
+                runner = PluginRunner(self._plugins, "handle_recording_start", [ self._current_metadata ])
+            else:
+                runner = PluginRunner(self._plugins, "handle_recording_restart", [ self._current_metadata ])
             runner.start()
 
     def stopRecording(self):
