@@ -155,11 +155,12 @@ if __name__ == "__main__":
                     is_live = (username in streams and streams[username]["type"] == "live")
 
                     if username in recorders and not recorders[username].isRecording():
-                        if recorders[username].encounteredError(): # continue the already started recording
+                        if recorders[username].encounteredError() and is_live: # continue the already started recording
                             newRecorder = recorders[username].getFreshClone()
                             recorders[username] = newRecorder
                             recorders[username].startRecording(streams[username])
                         else:
+                            # todo: run finish method?
                             del recorders[username] # remove finished recorders
 
                     if is_live and not username in recorders:
