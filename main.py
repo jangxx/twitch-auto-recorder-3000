@@ -160,7 +160,7 @@ if __name__ == "__main__":
                             recorders[username] = newRecorder
                             recorders[username].startRecording(streams[username])
                         else:
-                            # todo: run finish method?
+                            recorders[username].finish()
                             del recorders[username] # remove finished recorders
 
                     if is_live and not username in recorders:

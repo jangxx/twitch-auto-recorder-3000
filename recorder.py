@@ -30,6 +30,7 @@ class Recorder(Thread):
         self._current_title = None
         self._current_metadata = None
         self._current_stream = None
+        self._recording_path = None
         self._stop_event = Event()
 
         self._plugins = [p(c) for p,c in plugins]
@@ -53,9 +54,9 @@ class Recorder(Thread):
             if not os.path.exists(self._output_path):
                 os.makedirs(self._output_path, exist_ok=True)
 
-            recording_path = os.path.join(self._output_path, self._current_title + ".ts")
+            self._recording_path = os.path.join(self._output_path, self._current_title + ".ts")
 
-            with open(recording_path, "ab") as output_file:
+            with open(self._recording_path, "ab") as output_file:
                 stream_fd = self._current_stream.open()
 
                 self._recording = True
@@ -88,10 +89,10 @@ class Recorder(Thread):
         
         if len(self._plugins) > 0:
             if self._encountered_error is None:
-                runner = PluginRunner(self._plugins, "handle_recording_end", [ self._current_metadata, recording_path ])
+                self.finish()
             else:
-                runner = PluginRunner(self._plugins, "handle_recording_error", [ self._current_metadata, recording_path, self._encountered_error ])
-            runner.start()
+                runner = PluginRunner(self._plugins, "handle_recording_end", [ self._current_metadata, self._recording_path, self._encountered_error ], { "error": self._encountered_error, "finish": False })
+                runner.start()
 
     def startRecording(self, metadata):
         if self._recording:
@@ -124,10 +125,15 @@ class Recorder(Thread):
 
         if len(self._plugins) > 0:
             if not self._cloned:
-                runner = PluginRunner(self._plugins, "handle_recording_start", [ self._current_metadata ])
+                runner = PluginRunner(self._plugins, "handle_recording_start", [ self._current_metadata ], { "restart": False })
             else:
-                runner = PluginRunner(self._plugins, "handle_recording_restart", [ self._current_metadata ])
+                runner = PluginRunner(self._plugins, "handle_recording_start", [ self._current_metadata ], { "restart": True })
             runner.start()
 
     def stopRecording(self):
         self._stop_event.set()
+
+    def finish(self):
+        if self._recording_path is not None:
+            runner = PluginRunner(self._plugins, "handle_recording_end", [ self._current_metadata, self._recording_path ], { "error": None, "finish": True })
+            runner.start()
