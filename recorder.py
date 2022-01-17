@@ -91,7 +91,7 @@ class Recorder(Thread):
             if self._encountered_error is None:
                 self.finish()
             else:
-                runner = PluginRunner(self._plugins, "handle_recording_end", [ self._current_metadata, self._recording_path, self._encountered_error ], { "error": self._encountered_error, "finish": False })
+                runner = PluginRunner(self._plugins, "handle_recording_end", [ self._current_metadata, self._recording_path ], { "error": self._encountered_error, "finish": False })
                 runner.start()
 
     def startRecording(self, metadata):

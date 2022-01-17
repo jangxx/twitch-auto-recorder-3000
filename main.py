@@ -159,8 +159,10 @@ if __name__ == "__main__":
                             newRecorder = recorders[username].getFreshClone()
                             recorders[username] = newRecorder
                             recorders[username].startRecording(streams[username])
-                        else:
+                        elif recorders[username].encounteredError(): # run finish and remove recorder afterwards
                             recorders[username].finish()
+                            del recorders[username] # remove finished recorders
+                        else: # everything worked out perfectly: just delete recorder
                             del recorders[username] # remove finished recorders
 
                     if is_live and not username in recorders:
