@@ -34,7 +34,7 @@ if you want to use the plugins, you also have to install their requirements as w
 
 # Usage
 
-Run `python main.py` with some of these command line arguments:
+Activate the virtualenv and then run `python main.py` with some of these command line arguments:
 
 `-h, --help`  
 Show help message and exit.
