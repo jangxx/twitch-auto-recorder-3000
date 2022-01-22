@@ -36,7 +36,7 @@ parser = argparse.ArgumentParser(description="A tool to automatically download s
 parser.add_argument("--twitch-clientid", metavar="clientid", dest="clientid", help="Client ID of your twitch application")
 parser.add_argument("--twitch-secret", metavar="secret", dest="secret", help="Client Secret of your twitch application")
 parser.add_argument("-O", "--output-path", metavar="path", dest="output_path", help="Path where the recordings are stored (Default: ./recordings)")
-parser.add_argument("-s", metavar="username", dest="watched_accounts", help="Add a username to the list of watched streamers. The quality can be set by writing it behind the username separated by a colon ('username:quality')", action="append", default=[])
+parser.add_argument("-s", metavar="username", dest="watched_accounts", help="Add a username to the list of watched streamers. The quality can be set by writing it after the username separated by a colon ('username:quality')", action="append", default=[])
 parser.add_argument("--update-interval", metavar="seconds", dest="update_interval", help="Update interval in seconds (Default: 120)", type=int)
 parser.add_argument("--log", metavar="loglevel", dest="loglevel", help="Sets the loglevel, one of CRITICAL, ERROR, WARNING, INFO, DEBUG (Default: INFO)", default="INFO")
 parser.add_argument("-c", metavar="option", dest="streamlink_options", help="Set a streamlink config option in the format optionname:type=value, e.g. '-c ipv4:bool=True' or '-c ffmpeg-ffmpeg:str=/usr/bin/ffmpeg'", action="append", default=[], type=streamlink_option_type)
@@ -66,12 +66,15 @@ config.merge({
     "plugins": { p: {} for p in args.plugins },
 })
 
+if args.print_config:
+    print(json.dumps(config._config, indent=4))
+
 if not config.is_valid():
     print(f"Incomplete config, missing key: {'.'.join(config.find_missing_keys())}")
     sys.exit(1)
 
 if args.print_config:
-    print(json.dumps(config._config, indent=4))
+    sys.exit(1)
 
 twitch = Twitch( config.value(["twitch", "clientid"]), config.value(["twitch", "secret"]) )
 
