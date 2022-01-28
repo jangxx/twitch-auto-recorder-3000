@@ -14,8 +14,8 @@ from recorder import Recorder
 from config import Config
 
 def streamlink_option_type(val):
-    optionRe = re.compile("^(.*?):(.*?)=(.*)$")
-    matches = optionRe.match(val)
+    option_re = re.compile("^(.*?):(.*?)=(.*)$")
+    matches = option_re.match(val)
 
     if matches is None:
         raise argparse.ArgumentError(f"Streamlink option parameter '{val}' could not be parsed")
@@ -133,7 +133,6 @@ if __name__ == "__main__":
 
         [ username, quality ] = username_definition
 
-        # watches[username] = Watch(username, quality, config.value("output_path"), config.value("streamlink_options"), plugins)
         watches[username] = { "quality": quality }
         log.info(f"Watching twitch user {username}")
 

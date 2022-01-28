@@ -7,7 +7,7 @@ class Plugin:
         return "Unnamed-Plugin"
 
     def handle_recording_start(self, stream_metadata, restart=False):
-        pass
+        pass # abstact method
 
     def handle_recording_end(self, stream_metadata, output_path, error=None, finish=True):
-        pass
+        pass # abstract method

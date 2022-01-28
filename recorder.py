@@ -42,10 +42,10 @@ class Recorder(Thread):
         return self._encountered_error is not None
 
     def getFreshClone(self):
-        newRecorder = Recorder(*self._launch_params)
-        newRecorder._current_title = self._current_title
-        newRecorder._cloned = True
-        return newRecorder
+        new_recorder = Recorder(*self._launch_params)
+        new_recorder._current_title = self._current_title
+        new_recorder._cloned = True
+        return new_recorder
 
     def run(self) -> None:
         stream_fd = None
@@ -63,9 +63,6 @@ class Recorder(Thread):
 
                 while not self._stop_event.is_set():
                     data = stream_fd.read(1024)
-
-                    # if random.random() < 0.00001:
-                    #     raise Exception("random test exception")
 
                     if not data: # stream has ended
                         break
