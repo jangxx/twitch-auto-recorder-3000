@@ -1,6 +1,8 @@
 # Twitch Auto Recorder 3000
 A better way to automatically download streams from twitch as streamers go live
 
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=jangxx_twitch-auto-recorder-3000&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=jangxx_twitch-auto-recorder-3000)
+
 # Requirements
 
 - Python >=3.7
