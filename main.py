@@ -38,6 +38,7 @@ parser.add_argument("--twitch-secret", metavar="secret", dest="secret", help="Cl
 parser.add_argument("-O", "--output-path", metavar="path", dest="output_path", help="Path where the recordings are stored (Default: ./recordings)")
 parser.add_argument("-s", metavar="username", dest="watched_accounts", help="Add a username to the list of watched streamers. The quality can be set by writing it after the username separated by a colon ('username:quality')", action="append", default=[])
 parser.add_argument("--update-interval", metavar="seconds", dest="update_interval", help="Update interval in seconds (Default: 120)", type=int)
+parser.add_argument("--stream-end-timeout", metavar="seconds", dest="stream_end_timeout", help="Time to wait after a recording ended before considering the stream as finished (Default: 0)", type=int)
 parser.add_argument("--log", metavar="loglevel", dest="loglevel", help="Sets the loglevel, one of CRITICAL, ERROR, WARNING, INFO, DEBUG (Default: INFO)", default="INFO")
 parser.add_argument("-c", metavar="option", dest="streamlink_options", help="Set a streamlink config option in the format optionname:type=value, e.g. '-c ipv4:bool=True' or '-c ffmpeg-ffmpeg:str=/usr/bin/ffmpeg'", action="append", default=[], type=streamlink_option_type)
 parser.add_argument("-p", metavar="plugin", dest="plugins", help="Enable a plugin", default=[], action="append")
@@ -62,6 +63,7 @@ config.merge({
     "streamers": args.watched_accounts,
     "output_path": args.output_path,
     "update_interval": args.update_interval,
+    "stream_end_timeout": args.stream_end_timeout,
     "streamlink_options": args.streamlink_options,
     "plugins": { p: {} for p in args.plugins },
 })
@@ -157,14 +159,14 @@ if __name__ == "__main__":
                     is_live = (username in streams and streams[username]["type"] == "live")
 
                     if username in recorders and not recorders[username].isRecording():
-                        if recorders[username].encounteredError() and is_live: # continue the already started recording
+                        stream_end_timeout_reached = (time.time() - recorders[username].getStopTime()) >= config.value("stream_end_timeout")
+
+                        if is_live: # continue recording
                             newRecorder = recorders[username].getFreshClone()
                             recorders[username] = newRecorder
                             recorders[username].startRecording(streams[username])
-                        elif recorders[username].encounteredError(): # run finish and remove recorder afterwards
+                        elif stream_end_timeout_reached:
                             recorders[username].finish()
-                            del recorders[username] # remove finished recorders
-                        else: # everything worked out perfectly: just delete recorder
                             del recorders[username] # remove finished recorders
 
                     if is_live and not username in recorders:

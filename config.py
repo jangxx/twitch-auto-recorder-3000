@@ -36,6 +36,7 @@ class Config:
             "output_path": "./recordings",
             "streamers": [],
             "update_interval": 120,
+            "stream_end_timeout": 0,
             "streamlink_options": [],
             "plugins": {},
         }

@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 import os
 import sys
+import time
 
 import random
 
@@ -31,6 +32,7 @@ class Recorder(Thread):
         self._current_metadata = None
         self._current_stream = None
         self._recording_path = None
+        self._stop_time = 0
         self._stop_event = Event()
 
         self._plugins = [p(c) for p,c in plugins]
@@ -41,9 +43,14 @@ class Recorder(Thread):
     def encounteredError(self):
         return self._encountered_error is not None
 
+    def getStopTime(self):
+        return self._stop_time
+
     def getFreshClone(self):
         new_recorder = Recorder(*self._launch_params)
         new_recorder._current_title = self._current_title
+        new_recorder._stop_time = self._stop_time
+        new_recorder._recording_path = self._recording_path
         new_recorder._cloned = True
         return new_recorder
 
@@ -78,18 +85,17 @@ class Recorder(Thread):
             log.error(f"Error while recording: {repr(e)}")
             self._encountered_error = e
         finally:
+            self._stop_time = time.time()
+
             if stream_fd is not None:
                 stream_fd.close()
-        
+
         self._recording = False
         log.info(f"Stopped recording of twitch user {self._username}")
         
         if len(self._plugins) > 0:
-            if self._encountered_error is None:
-                self.finish()
-            else:
-                runner = PluginRunner(self._plugins, "handle_recording_end", [ self._current_metadata, self._recording_path ], { "error": self._encountered_error, "finish": False })
-                runner.start()
+            runner = PluginRunner(self._plugins, "handle_recording_end", [ self._current_metadata, self._recording_path ], { "error": self._encountered_error, "finish": False })
+            runner.start()
 
     def startRecording(self, metadata):
         if self._recording:
@@ -105,6 +111,8 @@ class Recorder(Thread):
         streams = session.streams(f"https://twitch.tv/{self._username}")
 
         if not self._quality in streams:
+            self._stop_time = time.time()
+            self._encountered_error = Exception(f"Could not find quality '{self._quality}' in the list of available qualities.")
             log.error(f"Could not find quality '{self._quality}' in the list of available qualities. Options are: {', '.join(streams.keys())}")
             return
 

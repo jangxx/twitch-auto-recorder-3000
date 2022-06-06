@@ -59,6 +59,9 @@ Show help message and exit.
 `--update-interval <seconds>`  
 **Optional:** Update interval in seconds (Default: 120)
 
+`--stream-end-timeout <seconds>`  
+**Optional:** Time to wait after a recording ended before considering the stream as finished (Default: 0)
+
 `--log <loglevel>`  
 **Optional:** Sets the loglevel, one of CRITICAL, ERROR, WARNING, INFO, DEBUG (Default: INFO)
 
@@ -92,6 +95,7 @@ plugins:
     plugin2_name: {} 
 output_path: <path>
 update_interval: <interval>
+stream_end_timeout: <time>
 ```
 
 Except for the plugin options, all configuration options can be set with command line arguments as well.
