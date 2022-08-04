@@ -116,6 +116,14 @@ class Recorder(Thread):
             log.error(f"Could not find quality '{self._quality}' in the list of available qualities. Options are: {', '.join(streams.keys())}")
             return
 
+        current_stream = streams[self._quality]
+
+        if not self._username in current_stream.to_manifest_url():
+            self._stop_time = time.time()
+            self._encountered_error = Exception(f"This stream is a hosted stream by a different person and is therefore not going to be recorded.")
+            log.error(f"This stream is a hosted stream by a different person and is therefore not going to be recorded.")
+            return
+
         if self._current_title is None: # otherwise we are cloned -> reuse the old title so we can append to the same file
             if "win" in sys.platform:
                 self._current_title = f"{datetime.now().strftime('%Y-%m-%d_%H_%M_%S')}_{self._username}_{pathvalidate.sanitize_filename(metadata['title'])}"
@@ -125,7 +133,7 @@ class Recorder(Thread):
         self._current_metadata = metadata
 
         self._stop_event.clear()
-        self._current_stream = streams[self._quality]
+        self._current_stream = current_stream
         self.start()
 
         if len(self._plugins) > 0:
