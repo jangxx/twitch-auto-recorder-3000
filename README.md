@@ -28,11 +28,16 @@ _Windows_:
 
 and then install the required packages:
 
-    pip install -r requirements.txt
+```bash
+pip install -r requirements.txt
+```
 
 if you want to use the plugins, you also have to install their requirements as well:
 
-    pip install -r requirements-plugins.txt
+```bash
+pip install setuptools==57.5.0 # optionally run this in case the next line fails
+pip install -r requirements-plugins.txt
+```
 
 # Usage
 
