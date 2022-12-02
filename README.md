@@ -115,7 +115,8 @@ It has no config options, so it can be enabled with `-p ffmpeg_remux` or by addi
 _Note:_ For convenience there is also a clean-up script included in this project _cleanup_remuxed.py_, which takes the recording path as a parameter and which can be run as a cronjob to automatically and periodically delete the already remuxed .ts files.
 
 `pushover`  
-This plugin uses [pushover](https://pushover.net) to send notifications about your recordings to your phone. Since it needs configuration, it can only be enabled with the config file:
+This plugin uses [pushover](https://pushover.net) to send notifications about your recordings to your phone.
+Since it needs configuration, it can only be enabled with the config file:
 ```yaml
 plugins:
     pushover:
@@ -123,3 +124,12 @@ plugins:
         api_token: <api_token>
 ```
 You get your user key and an API token on the pushover website.
+
+`discord_notifications`  
+This plugin sends notifications about your recordings to a Discord channel by utilizing the [Webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) feature.
+Since it needs configuration, it can only be enabled with the config file:
+```yaml
+plugins:
+    discord_notifications:
+        webhook: <webhook_url>
+```
