@@ -135,6 +135,8 @@ if __name__ == "__main__":
 
         [ username, quality ] = username_definition
 
+        username = username.lower()
+
         watches[username] = { "quality": quality }
         log.info(f"Watching twitch user {username}")
 
