@@ -21,9 +21,9 @@ class PushoverPlugin(Plugin):
     def handle_recording_end(self, stream_metadata, output_path, error=None, finish=True):
         if finish:
             self._client.send_message(f"Finished recording of user {stream_metadata['user_name']}")
-        elif not finish and error is None:
+        elif error is None: # and not finish
             self._client.send_message(f"Stopped recording of user {stream_metadata['user_name']}")
-        elif error is not None:
+        else: # error is not None
             self._client.send_message(f"Encountered error while recording user {stream_metadata['user_name']}: {repr(error)}")
 
 PluginExport = PushoverPlugin

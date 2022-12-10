@@ -27,7 +27,7 @@ def streamlink_option_type(val):
         "str": str,
     }
 
-    if not matches.group(2) in contructors:
+    if matches.group(2) not in contructors:
         raise argparse.ArgumentError(f"Streamlink option parameter '{val}' specifies an invalid type. Possible types are {', '.join(contructors.keys())}")
 
     return matches.group(1), contructors[matches.group(2)](matches.group(3))
@@ -169,7 +169,7 @@ if __name__ == "__main__":
                             recorders[username].finish()
                             del recorders[username] # remove finished recorders
 
-                    if is_live and not username in recorders:
+                    if is_live and username not in recorders:
                         recorders[username] = Recorder(username, quality, config.value("output_path"), config.value("streamlink_options"), plugins)
                         recorders[username].startRecording(streams[username])
 

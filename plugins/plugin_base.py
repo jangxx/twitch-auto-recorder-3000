@@ -11,3 +11,6 @@ class Plugin:
 
     def handle_recording_end(self, stream_metadata, output_path, error=None, finish=True):
         pass # abstract method
+
+class PluginException(Exception):
+    pass

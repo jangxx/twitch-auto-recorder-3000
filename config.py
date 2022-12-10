@@ -21,7 +21,7 @@ def merge_config_dicts(base_config, merge_src):
             result[key] = merge_src[key]
 
     for key in base_config:
-        if not key in result:
+        if key not in result:
             result[key] = base_config[key]
 
     return result
@@ -59,7 +59,7 @@ class Config:
     def value(self, path):
         ret = self._config
 
-        if not type(path) is list:
+        if type(path) is not list:
             path = [ path ]
 
         for e in path:

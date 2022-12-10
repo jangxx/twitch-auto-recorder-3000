@@ -111,7 +111,7 @@ class Recorder(Thread):
 
         streams = session.streams(f"https://twitch.tv/{self._username}")
 
-        if not self._quality in streams:
+        if self._quality not in streams:
             self._stop_time = time.time()
             self._encountered_error = Exception(f"Could not find quality '{self._quality}' in the list of available qualities.")
             log.error(f"Could not find quality '{self._quality}' in the list of available qualities. Options are: {', '.join(streams.keys())}")
@@ -119,7 +119,7 @@ class Recorder(Thread):
 
         current_stream = streams[self._quality]
 
-        if not self._username in current_stream.to_manifest_url():
+        if self._username not in current_stream.to_manifest_url():
             self._stop_time = time.time()
             self._encountered_error = Exception(f"This stream is a hosted stream by a different person and is therefore not going to be recorded.")
             log.error(f"This stream is a hosted stream by a different person and is therefore not going to be recorded.")

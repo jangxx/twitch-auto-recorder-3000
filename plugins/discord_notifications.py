@@ -1,4 +1,4 @@
-from .plugin_base import Plugin
+from .plugin_base import Plugin, PluginException
 
 import requests
 
@@ -14,8 +14,8 @@ class DiscordNotificationPlugin(Plugin):
     def __init__(self, config):
         super().__init__(config)
 
-        if not "webhook" in self._config:
-            raise Exception("Config key 'webhook' is missing")
+        if "webhook" not in self._config:
+            raise PluginException("Config key 'webhook' is missing")
 
     @staticmethod
     def get_name():
@@ -30,9 +30,9 @@ class DiscordNotificationPlugin(Plugin):
     def handle_recording_end(self, stream_metadata, output_path, error=None, finish=True):
         if finish:
             send_notification(self._config["webhook"], f"Finished recording of user {stream_metadata['user_name']}")
-        elif not finish and error is None:
+        elif error is None: # and not finish
             send_notification(self._config["webhook"], f"Stopped recording of user {stream_metadata['user_name']}")
-        elif error is not None:
+        else: # error is not None
             send_notification(self._config["webhook"], f"Encountered error while recording user {stream_metadata['user_name']}: {repr(error)}")
 
 PluginExport = DiscordNotificationPlugin
