@@ -49,6 +49,7 @@ class Recorder(Thread):
     def getFreshClone(self):
         new_recorder = Recorder(*self._launch_params)
         new_recorder._current_title = self._current_title
+        new_recorder._current_metadata = self._current_metadata
         new_recorder._stop_time = self._stop_time
         new_recorder._recording_path = self._recording_path
         new_recorder._cloned = True
