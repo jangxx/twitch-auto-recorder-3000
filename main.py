@@ -172,7 +172,7 @@ if __name__ == "__main__":
                             del recorders[username] # remove finished recorders
 
                     if is_live and username not in recorders:
-                        recorders[username] = Recorder(username, quality, config.value("output_path"), config.value("streamlink_options"), plugins)
+                        recorders[username] = Recorder(username, watches[username]["quality"], config.value("output_path"), config.value("streamlink_options"), plugins)
                         recorders[username].startRecording(streams[username])
 
             time.sleep(1)
