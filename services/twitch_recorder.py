@@ -5,22 +5,21 @@ import os
 import sys
 import time
 
-import random
-
 import pathvalidate
 import streamlink
 from streamlink.exceptions import StreamError
 
 from plugin_runner import PluginRunner
+from lib.recorder_base import RecorderBase
 
 log = logging.getLogger(__file__)
 
-class Recorder(Thread):
-    def __init__(self, username, quality, output_path, streamlink_options, plugins):
+class TwitchRecorder(RecorderBase):
+    def __init__(self, username: str, quality: str, output_path: str, streamlink_options, plugins):
         super().__init__()
         self._launch_params = (username, quality, output_path, streamlink_options, plugins) # make it easier to create a fresh copy later in case we need one
 
-        self._username = username
+        self._username = username.lower()
         self._quality = quality
         self._output_path = os.path.join(output_path, username)
         self._streamlink_options = streamlink_options
@@ -47,7 +46,7 @@ class Recorder(Thread):
         return self._stop_time
 
     def getFreshClone(self):
-        new_recorder = Recorder(*self._launch_params)
+        new_recorder = TwitchRecorder(*self._launch_params)
         new_recorder._current_title = self._current_title
         new_recorder._current_metadata = self._current_metadata
         new_recorder._stop_time = self._stop_time
