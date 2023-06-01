@@ -1,3 +1,5 @@
+# INFO: Due to changes to the Twitch API and this projects reliance on [streamlink](https://github.com/streamlink/streamlink), recording twitch streams does not work at the moment.
+
 # Twitch Auto Recorder 3000
 A better way to automatically download streams from twitch as streamers go live
 
