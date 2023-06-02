@@ -1,6 +1,4 @@
 REQUIRED_CONFIG = [
-    ("twitch", "clientid"),
-    ("twitch", "secret"),
     ("streamers",),
 ]
 

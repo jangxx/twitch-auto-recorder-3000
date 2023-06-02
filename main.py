@@ -15,6 +15,7 @@ from lib.username_definition import UsernameDefinition
 from plugins.plugin_base import Plugin
 
 from services.twitch_service import TwitchService
+from services.vrcdn_service import VRCDNService
 from config import Config
 
 def streamlink_option_type(val):
@@ -91,6 +92,7 @@ charset_normalizer_logger.setLevel(logging.CRITICAL)
 
 services: Dict[str, ServiceBase] = {
     "twitch": TwitchService(),
+    "vrcdn": VRCDNService(),
 }
 
 # init services
@@ -130,7 +132,7 @@ if __name__ == "__main__":
 
         if username_match is None:
             log.error(f"Invalid username definition: {streamer_definition}")
-            continue
+            sys.exit(1)
 
         username_definition = UsernameDefinition(
             service="twitch",
@@ -140,6 +142,14 @@ if __name__ == "__main__":
 
         if username_match.group(1) is not None:
             username_definition.service = username_match.group(1)
+
+        if username_definition.service not in services:
+            log.error(f"Invalid service {username_definition.service} for username {username_definition.username}")
+            sys.exit(1)
+
+        if not services[username_definition.service].initialized:
+            log.error(f"Service {username_definition.service} is not initialized")
+            sys.exit(1)
 
         if username_match.group(3) is not None:
             username_definition.parameters = username_match.group(3).split(":")[1:]
