@@ -1,4 +1,5 @@
 import argparse
+import signal
 import time
 import os
 import logging
@@ -103,13 +104,16 @@ for service in services.values():
         log.error(f"Failed to initialize service {service.get_name()}: {e}")
 
 
-def recorder_has_error(recorders: Dict[str, RecorderBase]):
+def recorder_is_finished(recorders: Dict[str, RecorderBase]):
     for recorder in recorders.values():
-        if not recorder.isRecording() and recorder.encounteredError():
+        if recorder.isFinished():
             return True
     return False
 
 if __name__ == "__main__":
+    # if "win" in sys.platform: # make ctrl-c work properly on windows
+        # signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     if not os.path.exists(config.value("output_path")):
         log.info(f"Output path {config.value('output_path')} doesn't exist, creating it now...")
         os.makedirs(config.value("output_path"), exist_ok=True)
@@ -164,8 +168,10 @@ if __name__ == "__main__":
         while True:
             streams_live = 0
 
-            if (time.time() - last_check >= config.value("update_interval") or recorder_has_error(recorders)):
-                # if we see an error do another quick check to see if the streamer is still live so we don't miss much
+            if (time.time() - last_check >= config.value("update_interval") or recorder_is_finished(recorders)):
+                # if there is a stream that just stopped quickly check the live status again
+                # -> if there was an error we can quickly restart the stream
+                # -> if the finished gracefully we prevent the stream from immediately restarting
                 last_check = time.time()
 
                 for service_name, service in services.items():
@@ -174,10 +180,14 @@ if __name__ == "__main__":
                     except Exception as ex:
                         log.error(f"Error while fetching streams for service {service_name}: {repr(ex)}")
 
-            if streams_live > 0:
+            if streams_live > 0 or len(recorders) > 0:
                 # check if the status of any of our watches has changed
                 for username_id, username_definition in watches.items():
                     is_live = services[username_definition.service].is_user_live(username_definition.username)
+
+                    print(username_id, is_live, username_id in recorders)
+                    if username_id in recorders:
+                        print("is recording", recorders[username_id].isRecording())
 
                     if username_id in recorders and not recorders[username_id].isRecording():
                         stream_end_timeout_reached = (time.time() - recorders[username_id].getStopTime()) >= config.value("stream_end_timeout")

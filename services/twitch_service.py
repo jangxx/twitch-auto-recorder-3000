@@ -1,8 +1,10 @@
+from datetime import datetime
 import logging
 from typing import List
 from config import Config
 
 from twitchAPI.twitch import Twitch
+from lib.stream_metadata import StreamMetadata
 
 from plugins.plugin_base import Plugin
 from lib.service_base import ServiceBase
@@ -54,6 +56,8 @@ class TwitchService(ServiceBase):
 
             remaining_usernames = remaining_usernames[100:]
 
+        print(self._streams)
+
         return len(self._streams)
 
     def get_recorder(self, username: str, params: List[str], plugins: List[Plugin]) -> TwitchRecorder:
@@ -64,4 +68,15 @@ class TwitchService(ServiceBase):
         return TwitchRecorder(username, quality, self._output_path, self._streamlink_options, plugins)
 
     def start_recorder(self, username: str, recorder: TwitchRecorder):
-        recorder.startRecording(self._streams[username.lower()])
+        stream_data = self._streams[username.lower()]
+
+        metadata = StreamMetadata(
+            username = username,
+            displayUsername = stream_data["user_name"],
+            title = stream_data["title"],
+            startedAt = datetime.now(), # we could also parse stream_data["started_at"]
+            service = "twitch",
+            additionalData = stream_data
+        )
+
+        recorder.startRecording(metadata)

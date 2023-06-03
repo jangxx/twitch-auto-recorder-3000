@@ -1,4 +1,7 @@
-class Plugin:
+from abc import ABC, abstractmethod
+from lib.stream_metadata import StreamMetadata
+
+class Plugin(ABC):
     def __init__(self, config):
         self._config = config
 
@@ -6,11 +9,13 @@ class Plugin:
     def get_name():
         return "Unnamed-Plugin"
 
-    def handle_recording_start(self, stream_metadata, restart=False):
-        pass # abstact method
+    @abstractmethod
+    def handle_recording_start(self, stream_metadata: StreamMetadata, restart=False):
+        pass
 
-    def handle_recording_end(self, stream_metadata, output_path, error=None, finish=True):
-        pass # abstract method
+    @abstractmethod
+    def handle_recording_end(self, stream_metadata: StreamMetadata, output_path: str, error=None, finish=True):
+        pass
 
 class PluginException(Exception):
     pass

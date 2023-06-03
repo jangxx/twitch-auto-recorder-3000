@@ -2,17 +2,25 @@ from abc import abstractmethod
 from threading import Thread
 
 class RecorderBase(Thread):
-    @abstractmethod
+    def __init__(self):
+        super().__init__()
+
+        self._recording = False
+        self._encountered_error = None
+        self._is_finished = False
+        self._stop_time = 0
+
     def isRecording(self) -> bool:
-        pass
+        return self._recording
 
-    @abstractmethod
-    def encounteredError(self) -> bool:
-        pass
+    def encounteredError(self):
+        return self._encountered_error is not None
 
-    @abstractmethod
-    def getStopTime(self) -> float:
-        pass
+    def getStopTime(self):
+        return self._stop_time
+
+    def isFinished(self):
+        return self._is_finished
 
     @abstractmethod
     def getFreshClone(self) -> "RecorderBase":
