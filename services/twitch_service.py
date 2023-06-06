@@ -56,8 +56,6 @@ class TwitchService(ServiceBase):
 
             remaining_usernames = remaining_usernames[100:]
 
-        print(self._streams)
-
         return len(self._streams)
 
     def get_recorder(self, username: str, params: List[str], plugins: List[Plugin]) -> TwitchRecorder:

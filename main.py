@@ -1,5 +1,4 @@
 import argparse
-import signal
 import time
 import os
 import logging
@@ -44,6 +43,7 @@ parser.add_argument("--twitch-secret", metavar="secret", dest="secret", help="Cl
 parser.add_argument("-O", "--output-path", metavar="path", dest="output_path", help="Path where the recordings are stored (Default: ./recordings)")
 parser.add_argument("-s", metavar="username", dest="watched_accounts", help="Add a username to the list of watched streamers. The quality can be set by writing it after the username separated by a colon ('username:quality')", action="append", default=[])
 parser.add_argument("--update-interval", metavar="seconds", dest="update_interval", help="Update interval in seconds (Default: 120)", type=int)
+parser.add_argument("--update-end-interval", metavar="seconds", dest="update_end_interval", help="Update interval in seconds after a recording has stopped but before it is finished (Default: 10)", type=int)
 parser.add_argument("--stream-end-timeout", metavar="seconds", dest="stream_end_timeout", help="Time to wait after a recording ended before considering the stream as finished (Default: 0)", type=int)
 parser.add_argument("--log", metavar="loglevel", dest="loglevel", help="Sets the loglevel, one of CRITICAL, ERROR, WARNING, INFO, DEBUG (Default: INFO)", default="INFO")
 parser.add_argument("-c", metavar="option", dest="streamlink_options", help="Set a streamlink config option in the format optionname:type=value, e.g. '-c ipv4:bool=True' or '-c ffmpeg-ffmpeg:str=/usr/bin/ffmpeg'", action="append", default=[], type=streamlink_option_type)
@@ -69,6 +69,7 @@ config.merge({
     "streamers": args.watched_accounts,
     "output_path": args.output_path,
     "update_interval": args.update_interval,
+    "update_end_interval": args.update_end_interval,
     "stream_end_timeout": args.stream_end_timeout,
     "streamlink_options": args.streamlink_options,
     "plugins": { p: {} for p in args.plugins },
@@ -82,7 +83,7 @@ if not config.is_valid():
     sys.exit(1)
 
 if args.print_config:
-    sys.exit(1)
+    sys.exit(0)
 
 
 logging.basicConfig(level=args.loglevel, format='[%(levelname)s] %(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
@@ -111,9 +112,6 @@ def recorder_is_finished(recorders: Dict[str, RecorderBase]):
     return False
 
 if __name__ == "__main__":
-    # if "win" in sys.platform: # make ctrl-c work properly on windows
-        # signal.signal(signal.SIGINT, signal.SIG_DFL)
-
     if not os.path.exists(config.value("output_path")):
         log.info(f"Output path {config.value('output_path')} doesn't exist, creating it now...")
         os.makedirs(config.value("output_path"), exist_ok=True)
@@ -168,7 +166,8 @@ if __name__ == "__main__":
         while True:
             streams_live = 0
 
-            if (time.time() - last_check >= config.value("update_interval") or recorder_is_finished(recorders)):
+            if (time.time() - last_check >= config.value("update_interval")) or \
+               (recorder_is_finished(recorders) and time.time() - last_check >= config.value("update_end_interval")):
                 # if there is a stream that just stopped quickly check the live status again
                 # -> if there was an error we can quickly restart the stream
                 # -> if the finished gracefully we prevent the stream from immediately restarting
@@ -184,10 +183,6 @@ if __name__ == "__main__":
                 # check if the status of any of our watches has changed
                 for username_id, username_definition in watches.items():
                     is_live = services[username_definition.service].is_user_live(username_definition.username)
-
-                    print(username_id, is_live, username_id in recorders)
-                    if username_id in recorders:
-                        print("is recording", recorders[username_id].isRecording())
 
                     if username_id in recorders and not recorders[username_id].isRecording():
                         stream_end_timeout_reached = (time.time() - recorders[username_id].getStopTime()) >= config.value("stream_end_timeout")

@@ -56,8 +56,6 @@ class VRCDNRecorder(RecorderBase):
 
             self._recording_path = os.path.join(self._output_path, self._current_title + ".ts")
 
-            print("run", self._recording_path)
-
             with open(self._recording_path, "ab") as output_file:
                 resp = requests.get(recording_url, stream=True, timeout=5)
                 resp.raise_for_status()
@@ -110,8 +108,6 @@ class VRCDNRecorder(RecorderBase):
                 self._current_title = f"{metadata.startedAt.strftime('%Y-%m-%d_%H_%M_%S')}_{self._username}"
             else:
                 self._current_title = f"{metadata.startedAt.strftime('%Y-%m-%d_%H:%M:%S')}_{self._username}"
-
-        print("start recording", self._current_title)
 
         self._current_metadata = metadata
 

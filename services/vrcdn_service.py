@@ -14,12 +14,8 @@ from services.vrcdn_recorder import VRCDNRecorder
 log = logging.getLogger(__file__)
 
 async def check_url(session: aiohttp.ClientSession, url: str):
-    print("check", url)
-
     try:
         async with session.get(url) as resp:
-            print(resp.status)
-
             if resp.status == 200:
                 return True
             else:
