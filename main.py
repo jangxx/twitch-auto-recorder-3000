@@ -6,11 +6,16 @@ import re
 import importlib
 import sys
 import json
+from typing import Dict, List, Type
 
-from twitchAPI.twitch import Twitch
 import yaml
+from lib.recorder_base import RecorderBase
+from lib.service_base import ServiceBase
+from lib.username_definition import UsernameDefinition
+from plugins.plugin_base import Plugin
 
-from recorder import Recorder
+from services.twitch_service import TwitchService
+from services.vrcdn_service import VRCDNService
 from config import Config
 
 def streamlink_option_type(val):
@@ -38,6 +43,7 @@ parser.add_argument("--twitch-secret", metavar="secret", dest="secret", help="Cl
 parser.add_argument("-O", "--output-path", metavar="path", dest="output_path", help="Path where the recordings are stored (Default: ./recordings)")
 parser.add_argument("-s", metavar="username", dest="watched_accounts", help="Add a username to the list of watched streamers. The quality can be set by writing it after the username separated by a colon ('username:quality')", action="append", default=[])
 parser.add_argument("--update-interval", metavar="seconds", dest="update_interval", help="Update interval in seconds (Default: 120)", type=int)
+parser.add_argument("--update-end-interval", metavar="seconds", dest="update_end_interval", help="Update interval in seconds after a recording has stopped but before it is finished (Default: 10)", type=int)
 parser.add_argument("--stream-end-timeout", metavar="seconds", dest="stream_end_timeout", help="Time to wait after a recording ended before considering the stream as finished (Default: 0)", type=int)
 parser.add_argument("--log", metavar="loglevel", dest="loglevel", help="Sets the loglevel, one of CRITICAL, ERROR, WARNING, INFO, DEBUG (Default: INFO)", default="INFO")
 parser.add_argument("-c", metavar="option", dest="streamlink_options", help="Set a streamlink config option in the format optionname:type=value, e.g. '-c ipv4:bool=True' or '-c ffmpeg-ffmpeg:str=/usr/bin/ffmpeg'", action="append", default=[], type=streamlink_option_type)
@@ -63,6 +69,7 @@ config.merge({
     "streamers": args.watched_accounts,
     "output_path": args.output_path,
     "update_interval": args.update_interval,
+    "update_end_interval": args.update_end_interval,
     "stream_end_timeout": args.stream_end_timeout,
     "streamlink_options": args.streamlink_options,
     "plugins": { p: {} for p in args.plugins },
@@ -76,9 +83,8 @@ if not config.is_valid():
     sys.exit(1)
 
 if args.print_config:
-    sys.exit(1)
+    sys.exit(0)
 
-twitch = Twitch( config.value(["twitch", "clientid"]), config.value(["twitch", "secret"]) )
 
 logging.basicConfig(level=args.loglevel, format='[%(levelname)s] %(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 log = logging.getLogger(__file__)
@@ -86,28 +92,22 @@ log = logging.getLogger(__file__)
 charset_normalizer_logger = logging.getLogger("charset_normalizer")
 charset_normalizer_logger.setLevel(logging.CRITICAL)
 
-def get_all_streams(usernames):
-    streams = {}
-    remaining_usernames = list(usernames)
-    cursor = None
+services: Dict[str, ServiceBase] = {
+    "twitch": TwitchService(),
+    "vrcdn": VRCDNService(),
+}
 
-    while len(remaining_usernames) > 0:
-        resp = twitch.get_streams(
-            after=cursor,
-            first = 100,
-            user_login=remaining_usernames[:100]
-        )
+# init services
+for service in services.values():
+    try:
+        service.initialized = service.init(config)
+    except Exception as e:
+        log.error(f"Failed to initialize service {service.get_name()}: {e}")
 
-        for stream in resp["data"]:
-            streams[stream["user_login"]] = stream
 
-        remaining_usernames = remaining_usernames[100:]
-
-    return streams
-
-def recorder_has_error(recorders):
+def recorder_is_finished(recorders: Dict[str, RecorderBase]):
     for recorder in recorders.values():
-        if not recorder.isRecording() and recorder.encounteredError():
+        if recorder.isFinished():
             return True
     return False
 
@@ -117,63 +117,87 @@ if __name__ == "__main__":
         os.makedirs(config.value("output_path"), exist_ok=True)
 
     # list of tuples (class, config)
-    plugins = [
+    plugins: List[Type[Plugin]] = [
         (importlib.import_module(f"plugins.{p}").PluginExport, c) for p,c in config.value("plugins").items()
     ]
 
     for p in plugins:
         log.info(f"Loaded plugin {p[0].get_name()}")
 
-    log.info(f"Checking twitch every {config.value('update_interval')} seconds")
+    log.info(f"Checking services every {config.value('update_interval')} seconds")
 
-    watches = {}
-    for username_definition in config.value("streamers"):
-        username_definition = username_definition.split(":")
+    username_definition_re = re.compile(r"(?:(\w+)=)?([a-zA-Z0-9_\-]+)((?::\w+)*)")
 
-        if len(username_definition) == 1:
-            username_definition.append("best") # default quality is best
+    watches: Dict[str, UsernameDefinition] = {}
+    for streamer_definition in config.value("streamers"):
+        username_match = username_definition_re.match(streamer_definition)
 
-        [ username, quality ] = username_definition
+        if username_match is None:
+            log.error(f"Invalid username definition: {streamer_definition}")
+            sys.exit(1)
 
-        username = username.lower()
+        username_definition = UsernameDefinition(
+            service="twitch",
+            username=username_match.group(2),
+            parameters=[]
+        )
 
-        watches[username] = { "quality": quality }
-        log.info(f"Watching twitch user {username}")
+        if username_match.group(1) is not None:
+            username_definition.service = username_match.group(1)
 
-    recorders = {}
+        if username_definition.service not in services:
+            log.error(f"Invalid service {username_definition.service} for username {username_definition.username}")
+            sys.exit(1)
+
+        if not services[username_definition.service].initialized:
+            log.error(f"Service {username_definition.service} is not initialized")
+            sys.exit(1)
+
+        if username_match.group(3) is not None:
+            username_definition.parameters = username_match.group(3).split(":")[1:]
+
+        watches[username_definition.get_id()] = username_definition
+        log.info(f"Watching {username_definition.service} user {username_definition.username}")
+
+    recorders: Dict[str, RecorderBase] = {} # mapping from userdef_id to recorder
     last_check = 0
 
     try:
         while True:
-            streams = None
+            streams_live = 0
 
-            if (time.time() - last_check >= config.value("update_interval") or recorder_has_error(recorders)):
-                # if we see an error do another quick check to see if the streamer is still live so we don't miss much
+            if (time.time() - last_check >= config.value("update_interval")) or \
+               (recorder_is_finished(recorders) and time.time() - last_check >= config.value("update_end_interval")):
+                # if there is a stream that just stopped quickly check the live status again
+                # -> if there was an error we can quickly restart the stream
+                # -> if the finished gracefully we prevent the stream from immediately restarting
                 last_check = time.time()
-                try:
-                    streams = get_all_streams(watches.keys())
-                except Exception as ex:
-                    log.error(f"Error while fetching streams: {repr(ex)}")
 
-            if streams is not None:
+                for service_name, service in services.items():
+                    try:
+                        streams_live += service.update_streams(w.username for w in watches.values() if w.service == service_name)
+                    except Exception as ex:
+                        log.error(f"Error while fetching streams for service {service_name}: {repr(ex)}")
+
+            if streams_live > 0 or len(recorders) > 0:
                 # check if the status of any of our watches has changed
-                for username,watch in watches.items():
-                    is_live = (username in streams and streams[username]["type"] == "live")
+                for username_id, username_definition in watches.items():
+                    is_live = services[username_definition.service].is_user_live(username_definition.username)
 
-                    if username in recorders and not recorders[username].isRecording():
-                        stream_end_timeout_reached = (time.time() - recorders[username].getStopTime()) >= config.value("stream_end_timeout")
+                    if username_id in recorders and not recorders[username_id].isRecording():
+                        stream_end_timeout_reached = (time.time() - recorders[username_id].getStopTime()) >= config.value("stream_end_timeout")
 
                         if is_live: # continue recording
-                            newRecorder = recorders[username].getFreshClone()
-                            recorders[username] = newRecorder
-                            recorders[username].startRecording(streams[username])
+                            newRecorder = recorders[username_id].getFreshClone()
+                            recorders[username_id] = newRecorder
+                            services[username_definition.service].start_recorder(username_definition.username, newRecorder)
                         elif stream_end_timeout_reached:
-                            recorders[username].finish()
-                            del recorders[username] # remove finished recorders
+                            recorders[username_id].finish()
+                            del recorders[username_id] # remove finished recorders
 
-                    if is_live and username not in recorders:
-                        recorders[username] = Recorder(username, watches[username]["quality"], config.value("output_path"), config.value("streamlink_options"), plugins)
-                        recorders[username].startRecording(streams[username])
+                    if is_live and username_id not in recorders:
+                        recorders[username_id] = services[username_definition.service].get_recorder(username_definition.username, username_definition.parameters, plugins)
+                        services[username_definition.service].start_recorder(username_definition.username, recorders[username_id])
 
             time.sleep(1)
     except KeyboardInterrupt:

@@ -5,49 +5,39 @@ import os
 import sys
 import time
 
-import random
-
 import pathvalidate
 import streamlink
 from streamlink.exceptions import StreamError
 
+from lib.stream_metadata import StreamMetadata
 from plugin_runner import PluginRunner
+from lib.recorder_base import RecorderBase
 
 log = logging.getLogger(__file__)
 
-class Recorder(Thread):
-    def __init__(self, username, quality, output_path, streamlink_options, plugins):
+class TwitchRecorder(RecorderBase):
+    def __init__(self, username: str, quality: str, output_path: str, streamlink_options, plugins):
         super().__init__()
         self._launch_params = (username, quality, output_path, streamlink_options, plugins) # make it easier to create a fresh copy later in case we need one
 
-        self._username = username
+        self._username = username.lower()
         self._quality = quality
         self._output_path = os.path.join(output_path, username)
         self._streamlink_options = streamlink_options
 
         self._cloned = False
-        self._recording = False
-        self._encountered_error = None
+        
         self._current_title = None
-        self._current_metadata = None
+        self._current_metadata: StreamMetadata = None
         self._current_stream = None
         self._recording_path = None
-        self._stop_time = 0
+
         self._stop_event = Event()
 
         self._plugins = [p(c) for p,c in plugins]
 
-    def isRecording(self):
-        return self._recording
-
-    def encounteredError(self):
-        return self._encountered_error is not None
-
-    def getStopTime(self):
-        return self._stop_time
-
     def getFreshClone(self):
-        new_recorder = Recorder(*self._launch_params)
+        new_recorder = TwitchRecorder(*self._launch_params)
         new_recorder._current_title = self._current_title
         new_recorder._current_metadata = self._current_metadata
         new_recorder._stop_time = self._stop_time
@@ -92,13 +82,14 @@ class Recorder(Thread):
                 stream_fd.close()
 
         self._recording = False
+        self._is_finished = True
         log.info(f"Stopped recording of twitch user {self._username}")
         
         if len(self._plugins) > 0:
             runner = PluginRunner(self._plugins, "handle_recording_end", [ self._current_metadata, self._recording_path ], { "error": self._encountered_error, "finish": False })
             runner.start()
 
-    def startRecording(self, metadata):
+    def startRecording(self, metadata: StreamMetadata):
         if self._recording:
             return
 
@@ -127,9 +118,9 @@ class Recorder(Thread):
 
         if self._current_title is None: # otherwise we are cloned -> reuse the old title so we can append to the same file
             if "win" in sys.platform:
-                self._current_title = f"{datetime.now().strftime('%Y-%m-%d_%H_%M_%S')}_{self._username}_{pathvalidate.sanitize_filename(metadata['title'])}"
+                self._current_title = f"{metadata.startedAt.strftime('%Y-%m-%d_%H_%M_%S')}_{self._username}_{pathvalidate.sanitize_filename(metadata.title)}"
             else:
-                self._current_title = f"{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}_{self._username}_{pathvalidate.sanitize_filename(metadata['title'])}"
+                self._current_title = f"{metadata.startedAt.strftime('%Y-%m-%d_%H:%M:%S')}_{self._username}_{pathvalidate.sanitize_filename(metadata.title)}"
 
         self._current_metadata = metadata
 

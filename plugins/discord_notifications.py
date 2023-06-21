@@ -1,4 +1,4 @@
-from .plugin_base import Plugin, PluginException
+from .plugin_base import Plugin, PluginException, StreamMetadata
 
 import requests
 
@@ -21,18 +21,18 @@ class DiscordNotificationPlugin(Plugin):
     def get_name():
         return "Discord-Notifications"
 
-    def handle_recording_start(self, stream_metadata, restart=False):
+    def handle_recording_start(self, stream_metadata: StreamMetadata, restart=False):
         if not restart:
-            send_notification(self._config["webhook"], f"Started recording of user {stream_metadata['user_name']}")
+            send_notification(self._config["webhook"], f"Started recording of user {stream_metadata.displayUsername}")
         else:
-            send_notification(self._config["webhook"], f"Restarted recording of user {stream_metadata['user_name']}")
+            send_notification(self._config["webhook"], f"Restarted recording of user {stream_metadata.displayUsername}")
 
-    def handle_recording_end(self, stream_metadata, output_path, error=None, finish=True):
+    def handle_recording_end(self, stream_metadata: StreamMetadata, output_path, error=None, finish=True):
         if finish:
-            send_notification(self._config["webhook"], f"Finished recording of user {stream_metadata['user_name']}")
+            send_notification(self._config["webhook"], f"Finished recording of user {stream_metadata.displayUsername}")
         elif error is None: # and not finish
-            send_notification(self._config["webhook"], f"Stopped recording of user {stream_metadata['user_name']}")
+            send_notification(self._config["webhook"], f"Stopped recording of user {stream_metadata.displayUsername}")
         else: # error is not None
-            send_notification(self._config["webhook"], f"Encountered error while recording user {stream_metadata['user_name']}: {repr(error)}")
+            send_notification(self._config["webhook"], f"Encountered error while recording user {stream_metadata.displayUsername}: {repr(error)}")
 
 PluginExport = DiscordNotificationPlugin

@@ -1,6 +1,4 @@
 REQUIRED_CONFIG = [
-    ("twitch", "clientid"),
-    ("twitch", "secret"),
     ("streamers",),
 ]
 
@@ -36,6 +34,7 @@ class Config:
             "output_path": "./recordings",
             "streamers": [],
             "update_interval": 120,
+            "update_end_interval": 10,
             "stream_end_timeout": 0,
             "streamlink_options": [],
             "plugins": {},

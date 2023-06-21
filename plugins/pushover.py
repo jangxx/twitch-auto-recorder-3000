@@ -1,4 +1,4 @@
-from .plugin_base import Plugin
+from .plugin_base import Plugin, StreamMetadata
 
 import pushover
 
@@ -12,18 +12,18 @@ class PushoverPlugin(Plugin):
     def get_name():
         return "Pushover-Notifications"
 
-    def handle_recording_start(self, stream_metadata, restart=False):
+    def handle_recording_start(self, stream_metadata: StreamMetadata, restart=False):
         if not restart:
-            self._client.send_message(f"Started recording of user {stream_metadata['user_name']}")
+            self._client.send_message(f"Started recording of user {stream_metadata.displayUsername}")
         else:
-            self._client.send_message(f"Restarted recording of user {stream_metadata['user_name']}")
+            self._client.send_message(f"Restarted recording of user {stream_metadata.displayUsername}")
 
-    def handle_recording_end(self, stream_metadata, output_path, error=None, finish=True):
+    def handle_recording_end(self, stream_metadata: StreamMetadata, output_path, error=None, finish=True):
         if finish:
-            self._client.send_message(f"Finished recording of user {stream_metadata['user_name']}")
+            self._client.send_message(f"Finished recording of user {stream_metadata.displayUsername}")
         elif error is None: # and not finish
-            self._client.send_message(f"Stopped recording of user {stream_metadata['user_name']}")
+            self._client.send_message(f"Stopped recording of user {stream_metadata.displayUsername}")
         else: # error is not None
-            self._client.send_message(f"Encountered error while recording user {stream_metadata['user_name']}: {repr(error)}")
+            self._client.send_message(f"Encountered error while recording user {stream_metadata.displayUsername}: {repr(error)}")
 
 PluginExport = PushoverPlugin

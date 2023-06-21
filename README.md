@@ -1,7 +1,13 @@
 # INFO: Due to changes to the Twitch API and this projects reliance on [streamlink](https://github.com/streamlink/streamlink), the recording functionality can unfortunately break at any time right now.
 
 # Twitch Auto Recorder 3000
-A better way to automatically download streams from twitch as streamers go live
+A better way to automatically download streams from twitch as streamers go live.
+Other services are also supported an can be used by prepending the service name to the username separated by an equals sign.
+
+Currently these services are supported:
+
+- `twitch`
+- `vrcdn`
 
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=jangxx_twitch-auto-recorder-3000&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=jangxx_twitch-auto-recorder-3000)
 
@@ -49,13 +55,15 @@ Activate the virtualenv and then run `python main.py` with some of these command
 Show help message and exit.
 
 `--twitch-clientid <clientid>`  
-**Required:** Client ID of your twitch application (from the [Developer console](https://dev.twitch.tv/console/apps))
+**Optional:** Client ID of your twitch application (from the [Developer console](https://dev.twitch.tv/console/apps))
 
 `--twitch-secret <secret>`  
-**Required:** Client Secret of your twitch application (from the [Developer console](https://dev.twitch.tv/console/apps))
+**Optional:** Client Secret of your twitch application (from the [Developer console](https://dev.twitch.tv/console/apps))
 
 `-s <username>`  
-**Required:** Add a username to the list of watched streamers. The quality can be set by writing it after the username separated by a colon ('username:quality')
+**Required:** Add a username to the list of watched streamers.
+The quality (for twitch) can be set by writing it after the username separated by a colon [username:quality].
+The service is specified by writing it before the name separated by an equals sign [service=username].
 
 `-C <path>, --config <path>`  
 **Optional:** Path to a config file in YAML format.
@@ -65,6 +73,10 @@ Show help message and exit.
 
 `--update-interval <seconds>`  
 **Optional:** Update interval in seconds (Default: 120)
+
+`--update-end-interval <seconds>`  
+**Optional:** Update interval in seconds after a recording has stopped but before it is finished (Default: 10).  
+This option only comes into play if `stream_end_timeout` is also used.
 
 `--stream-end-timeout <seconds>`  
 **Optional:** Time to wait after a recording ended before considering the stream as finished (Default: 0)
@@ -89,7 +101,7 @@ twitch:
     secret: <secret>
 streamers:
     - <username1>
-    - <username2>
+    - "<service>=<username2>"
 streamlink_options:
     - <option1>
     - <option2>
@@ -102,6 +114,7 @@ plugins:
     plugin2_name: {} 
 output_path: <path>
 update_interval: <interval>
+update_end_interval: <interval>
 stream_end_timeout: <time>
 ```
 
