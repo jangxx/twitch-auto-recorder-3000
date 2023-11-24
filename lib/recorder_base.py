@@ -5,6 +5,7 @@ class RecorderBase(Thread):
     def __init__(self):
         super().__init__()
 
+        self._is_initialized = False
         self._recording = False
         self._encountered_error = None
         self._is_finished = False
@@ -12,6 +13,9 @@ class RecorderBase(Thread):
 
     def isRecording(self) -> bool:
         return self._recording
+
+    def isInitialized(self) -> bool:
+        return self._is_initialized
 
     def encounteredError(self):
         return self._encountered_error is not None

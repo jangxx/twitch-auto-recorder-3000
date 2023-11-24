@@ -58,6 +58,7 @@ class TwitchRecorder(RecorderBase):
                 stream_fd = self._current_stream.open()
 
                 self._recording = True
+                self._is_initialized = True
 
                 while not self._stop_event.is_set():
                     data = stream_fd.read(1024)
@@ -76,6 +77,7 @@ class TwitchRecorder(RecorderBase):
             log.error(f"Error while recording: {repr(e)}")
             self._encountered_error = e
         finally:
+            self._is_initialized = True # just in case we encounter an error earlier
             self._stop_time = time.time()
 
             if stream_fd is not None:

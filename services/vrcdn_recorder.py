@@ -62,6 +62,7 @@ class VRCDNRecorder(RecorderBase):
                 stream_iterator = resp.iter_content(None)
 
                 self._recording = True
+                self._is_initialized = True
                 ever_started = True
                 self._start_event.set()
 
@@ -81,6 +82,7 @@ class VRCDNRecorder(RecorderBase):
             log.error(f"Error while recording: {repr(e)}")
             self._encountered_error = e
         finally:
+            self._is_initialized = True # just in case we encounter an error earlier
             self._stop_time = time.time()
 
             if resp is not None:

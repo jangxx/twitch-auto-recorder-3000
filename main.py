@@ -184,7 +184,7 @@ if __name__ == "__main__":
                 for username_id, username_definition in watches.items():
                     is_live = services[username_definition.service].is_user_live(username_definition.username)
 
-                    if username_id in recorders and not recorders[username_id].isRecording():
+                    if username_id in recorders and recorders[username_id].isInitialized() and not recorders[username_id].isRecording():
                         stream_end_timeout_reached = (time.time() - recorders[username_id].getStopTime()) >= config.value("stream_end_timeout")
 
                         if is_live: # continue recording
