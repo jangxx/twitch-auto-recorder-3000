@@ -77,7 +77,6 @@ class TwitchRecorder(RecorderBase):
             log.error(f"Error while recording: {repr(e)}")
             self._encountered_error = e
         finally:
-            self._is_initialized = True # just in case we encounter an error earlier
             self._stop_time = time.time()
 
             if stream_fd is not None:
