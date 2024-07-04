@@ -1,7 +1,8 @@
-# INFO: Due to changes to the Twitch API and this projects reliance on [streamlink](https://github.com/streamlink/streamlink), the recording functionality can unfortunately break at any time right now.
-
 # Twitch Auto Recorder 3000
 A better way to automatically download streams from twitch as streamers go live.
+
+> Note: Due to this projects reliance on [streamlink](https://github.com/streamlink/streamlink), the recording functionality might break in the future if twitch decides to change their API again.
+
 Other services are also supported an can be used by prepending the service name to the username separated by an equals sign.
 
 Currently these services are supported:
