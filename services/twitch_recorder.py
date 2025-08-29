@@ -10,7 +10,7 @@ import streamlink
 from streamlink.exceptions import StreamError
 
 from lib.stream_metadata import StreamMetadata
-from plugin_runner import PluginRunner
+from lib.plugin_runner import PluginRunner
 from lib.recorder_base import RecorderBase
 
 log = logging.getLogger(__file__)

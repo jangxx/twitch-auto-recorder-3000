@@ -10,8 +10,6 @@ Currently these services are supported:
 - `twitch`
 - `vrcdn`
 
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=jangxx_twitch-auto-recorder-3000&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=jangxx_twitch-auto-recorder-3000)
-
 # Requirements
 
 - Python >=3.7

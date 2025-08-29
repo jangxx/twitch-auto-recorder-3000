@@ -2,10 +2,9 @@ from datetime import datetime
 import logging
 from typing import Dict, List
 import asyncio
-
 import aiohttp
 
-from config import Config
+from lib.config import Config
 from lib.stream_metadata import StreamMetadata
 from plugins.plugin_base import Plugin
 from lib.service_base import ServiceBase

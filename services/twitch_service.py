@@ -1,11 +1,10 @@
 from datetime import datetime
 import logging
 from typing import List
-from config import Config
 
 from twitchAPI.twitch import Twitch
 from lib.stream_metadata import StreamMetadata
-
+from lib.config import Config
 from plugins.plugin_base import Plugin
 from lib.service_base import ServiceBase
 from services.twitch_recorder import TwitchRecorder

@@ -7,16 +7,17 @@ import importlib
 import sys
 import json
 from typing import Dict, List, Type
-
 import yaml
+
 from lib.recorder_base import RecorderBase
 from lib.service_base import ServiceBase
 from lib.username_definition import UsernameDefinition
 from plugins.plugin_base import Plugin
-
+from lib.config import Config
 from services.twitch_service import TwitchService
 from services.vrcdn_service import VRCDNService
-from config import Config
+
+from _version import __version__
 
 def streamlink_option_type(val):
     option_re = re.compile("^(.*?):(.*?)=(.*)$")
@@ -50,6 +51,7 @@ parser.add_argument("-c", metavar="option", dest="streamlink_options", help="Set
 parser.add_argument("-p", metavar="plugin", dest="plugins", help="Enable a plugin", default=[], action="append")
 parser.add_argument("-C", "--config", metavar="path", dest="config_file_path", help="Optional path to a config file in YAML format")
 parser.add_argument("--print-config", dest="print_config", action="store_true", help="Print the config for debug purposes")
+parser.add_argument("-V", "--version", action="version", version=__version__)
 
 args = parser.parse_args()
 config = Config()

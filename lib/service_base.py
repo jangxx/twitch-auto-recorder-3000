@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from config import Config
+from lib.config import Config
 from plugins.plugin_base import Plugin
 from lib.recorder_base import RecorderBase
-from lib.username_definition import UsernameDefinition
 
 class ServiceBase(ABC):
     def __init__(self):
