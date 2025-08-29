@@ -1,11 +1,9 @@
-from threading import Thread, Event
+from threading import Event
 import logging
-from datetime import datetime
 import os
 import sys
 import time
 
-import pathvalidate
 import requests
 
 from lib.stream_metadata import StreamMetadata
