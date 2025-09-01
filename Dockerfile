@@ -1,11 +1,9 @@
-FROM python:3.10
+FROM python:3.13
 
 WORKDIR /opt/twitch-auto-recorder-3000
 
 RUN apt-get update
 RUN apt-get install -y ffmpeg build-essential
-
-RUN pip install "setuptools==57.5.0"
 
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
@@ -15,9 +13,10 @@ RUN pip install -r requirements-plugins.txt
 
 COPY . .
 
-RUN mkdir -p /data/{recordings,config}
+RUN mkdir -p /data/recordings
+
+RUN touch /data/config.yaml
 
 VOLUME /data/recordings
-VOLUME /data/config
 
-ENTRYPOINT [ "python", "main.py", "-O", "/data/recordings", "-C", "/data/config/config.yaml" ]
+ENTRYPOINT [ "python", "main.py", "-O", "/data/recordings", "-C", "/data/config.yaml" ]

@@ -1,6 +1,6 @@
 from datetime import datetime
 import logging
-from typing import Dict, List
+from typing import Dict, Iterable, List, Optional
 import asyncio
 import aiohttp
 
@@ -34,7 +34,10 @@ async def check_urls(urls: Dict[str, str]):
 
     return results
 
-class VRCDNService(ServiceBase):
+class VRCDNService(ServiceBase[VRCDNRecorder]):
+    _online_users: set[str]
+    _output_path: Optional[str]
+
     def __init__(self):
         super().__init__()
 
@@ -42,20 +45,19 @@ class VRCDNService(ServiceBase):
         self._output_path = None
 
     def init(self, config: Config):
-        self._output_path = config.value("output_path")
+        self._output_path = config.output_path
 
         return True
     
     def is_user_live(self, username: str) -> bool:
         return username in self._online_users
     
-    def update_streams(self, usernames: List[str]):
+    def update_streams(self, usernames: Iterable[str]):
         self._online_users = set()
 
-        loop = asyncio.get_event_loop_policy().get_event_loop()
         urls = { username: f"https://stream.vrcdn.live/live/{username}.live.ts" for username in usernames }
 
-        users_live = loop.run_until_complete(check_urls(urls))
+        users_live = asyncio.run(check_urls(urls))
 
         for username, is_live in users_live.items():
             if is_live:
@@ -64,7 +66,10 @@ class VRCDNService(ServiceBase):
         return len(self._online_users)
 
 
-    def get_recorder(self, username: str, params: List[str], plugins: List[Plugin]) -> VRCDNRecorder:
+    def get_recorder(self, username: str, params: List[str], plugins: list[tuple[type[Plugin], dict]]) -> VRCDNRecorder:
+        if self._output_path is None:
+            raise Exception("The service has not been initialized yet")
+
         return VRCDNRecorder(username, self._output_path, plugins)
     
     def start_recorder(self, username: str, recorder: VRCDNRecorder):

@@ -3,17 +3,30 @@ import logging
 import os
 import sys
 import time
+from typing import Optional
 
 import requests
 
 from lib.stream_metadata import StreamMetadata
 from lib.plugin_runner import PluginRunner
 from lib.recorder_base import RecorderBase
+from plugins.plugin_base import Plugin
 
 log = logging.getLogger(__file__)
 
 class VRCDNRecorder(RecorderBase):
-    def __init__(self, username: str, output_path: str, plugins):
+    _username: str
+    _output_path: str
+
+    _cloned: bool
+
+    _current_title: Optional[str]
+    _current_metadata: Optional[StreamMetadata]
+    _recording_path: Optional[str]
+
+    _plugins: list[Plugin]
+
+    def __init__(self, username: str, output_path: str, plugins: list[tuple[type[Plugin], dict]]):
         super().__init__()
         self.daemon = True
 
@@ -25,7 +38,7 @@ class VRCDNRecorder(RecorderBase):
         self._cloned = False
 
         self._current_title = None
-        self._current_metadata: StreamMetadata = None
+        self._current_metadata: Optional[StreamMetadata] = None
         self._recording_path = None
 
         self._stop_event = Event()
@@ -43,6 +56,9 @@ class VRCDNRecorder(RecorderBase):
         return new_recorder
     
     def run(self) -> None:
+        if self._current_title is None:
+            raise Exception("Cannot run recorder without having set a title first")
+
         resp = None
 
         recording_url = f"https://stream.vrcdn.live/live/{self._username}.live.ts"

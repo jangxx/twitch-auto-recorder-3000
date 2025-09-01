@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import Iterable, List
 
 from lib.config import Config
 from plugins.plugin_base import Plugin
 from lib.recorder_base import RecorderBase
 
-class ServiceBase(ABC):
+class ServiceBase[R](ABC):
     def __init__(self):
         self.initialized = False
     
@@ -19,13 +19,13 @@ class ServiceBase(ABC):
     
     # returns the number of active/live streams
     @abstractmethod
-    def update_streams(self, usernames: List[str]) -> int:
+    def update_streams(self, usernames: Iterable[str]) -> int:
         pass
 
     @abstractmethod
-    def get_recorder(self, username: str, params: List[str], plugins: List[Plugin]) -> RecorderBase:
+    def get_recorder(self, username: str, params: List[str], plugins: list[tuple[type[Plugin], dict]]) -> R:
         pass
 
     @abstractmethod
-    def start_recorder(self, username: str, recorder: RecorderBase):
+    def start_recorder(self, username: str, recorder: R):
         pass

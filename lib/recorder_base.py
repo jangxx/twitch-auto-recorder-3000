@@ -1,5 +1,8 @@
 from abc import abstractmethod
 from threading import Thread
+from typing import Self
+
+from lib.stream_metadata import StreamMetadata
 
 class RecorderBase(Thread):
     def __init__(self):
@@ -27,11 +30,11 @@ class RecorderBase(Thread):
         return self._is_finished
 
     @abstractmethod
-    def getFreshClone(self) -> "RecorderBase":
+    def getFreshClone(self) -> Self:
         pass
 
     @abstractmethod
-    def startRecording(self, metadata: dict):
+    def startRecording(self, metadata: StreamMetadata):
         pass
 
     @abstractmethod

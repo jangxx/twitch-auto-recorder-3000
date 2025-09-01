@@ -6,14 +6,16 @@ import re
 import importlib
 import sys
 import json
-from typing import Dict, List, Type
+from typing import Any, Dict, List, Type, cast
+
+from pydantic import ValidationError
 import yaml
 
 from lib.recorder_base import RecorderBase
 from lib.service_base import ServiceBase
 from lib.username_definition import UsernameDefinition
 from plugins.plugin_base import Plugin
-from lib.config import Config
+from lib.config import Config, ConfigMerger, DefaultConfigDict, non_empty_dict_or_none
 from services.twitch_service import TwitchService
 from services.vrcdn_service import VRCDNService
 
@@ -24,7 +26,7 @@ def streamlink_option_type(val):
     matches = option_re.match(val)
 
     if matches is None:
-        raise argparse.ArgumentError(f"Streamlink option parameter '{val}' could not be parsed")
+        raise argparse.ArgumentTypeError(f"Streamlink option parameter '{val}' could not be parsed")
 
     contructors = {
         "bool": bool,
@@ -34,13 +36,13 @@ def streamlink_option_type(val):
     }
 
     if matches.group(2) not in contructors:
-        raise argparse.ArgumentError(f"Streamlink option parameter '{val}' specifies an invalid type. Possible types are {', '.join(contructors.keys())}")
+        raise argparse.ArgumentTypeError(f"Streamlink option parameter '{val}' specifies an invalid type. Possible types are {', '.join(contructors.keys())}")
 
     return matches.group(1), contructors[matches.group(2)](matches.group(3))
 
 parser = argparse.ArgumentParser(description="A tool to automatically download streams from twitch as streamers go live")
-parser.add_argument("--twitch-clientid", metavar="clientid", dest="clientid", help="Client ID of your twitch application")
-parser.add_argument("--twitch-secret", metavar="secret", dest="secret", help="Client Secret of your twitch application")
+parser.add_argument("--twitch-clientid", metavar="clientid", dest="twitch_clientid", help="Client ID of your twitch application")
+parser.add_argument("--twitch-secret", metavar="secret", dest="twitch_secret", help="Client Secret of your twitch application")
 parser.add_argument("-O", "--output-path", metavar="path", dest="output_path", help="Path where the recordings are stored (Default: ./recordings)")
 parser.add_argument("-s", metavar="username", dest="watched_accounts", help="Add a username to the list of watched streamers. The quality can be set by writing it after the username separated by a colon ('username:quality')", action="append", default=[])
 parser.add_argument("--update-interval", metavar="seconds", dest="update_interval", help="Update interval in seconds (Default: 120)", type=int)
@@ -54,20 +56,22 @@ parser.add_argument("--print-config", dest="print_config", action="store_true", 
 parser.add_argument("-V", "--version", action="version", version=__version__)
 
 args = parser.parse_args()
-config = Config()
+config_dict: dict = DefaultConfigDict
 
 # merge config file
 if args.config_file_path is not None:
     with open(args.config_file_path, "r") as config_file:
         config_file_content = yaml.load(config_file, yaml.Loader)
-    config.merge(dict(config_file_content))
+
+    if config_file_content is not None: # don't raise an error when the config file is empty
+        config_dict = ConfigMerger.merge(config_dict, dict(config_file_content))
 
 # merge command line options
-config.merge({
-    "twitch": {
-        "clientid": args.clientid,
-        "secret": args.secret,
-    },
+config_dict = ConfigMerger.merge(config_dict, {
+    "twitch": non_empty_dict_or_none({
+        "clientid": args.twitch_clientid,
+        "secret": args.twitch_secret,
+    }),
     "streamers": args.watched_accounts,
     "output_path": args.output_path,
     "update_interval": args.update_interval,
@@ -78,10 +82,12 @@ config.merge({
 })
 
 if args.print_config:
-    print(json.dumps(config._config, indent=4))
+    print(json.dumps(config_dict, indent=4))
 
-if not config.is_valid():
-    print(f"Incomplete config, missing key: {'.'.join(config.find_missing_keys())}")
+try:
+    config = Config(**config_dict)
+except ValidationError as err:
+    print(err)
     sys.exit(1)
 
 if args.print_config:
@@ -100,11 +106,11 @@ services: Dict[str, ServiceBase] = {
 }
 
 # init services
-for service in services.values():
+for service_name, service in services.items():
     try:
         service.initialized = service.init(config)
     except Exception as e:
-        log.error(f"Failed to initialize service {service.get_name()}: {e}")
+        log.error(f"Failed to initialize service {service_name}: {e}")
 
 
 def recorder_is_finished(recorders: Dict[str, RecorderBase]):
@@ -114,24 +120,34 @@ def recorder_is_finished(recorders: Dict[str, RecorderBase]):
     return False
 
 if __name__ == "__main__":
-    if not os.path.exists(config.value("output_path")):
-        log.info(f"Output path {config.value('output_path')} doesn't exist, creating it now...")
-        os.makedirs(config.value("output_path"), exist_ok=True)
+    if not os.path.exists(config.output_path):
+        log.info(f"Output path {config.output_path} doesn't exist, creating it now...")
+        os.makedirs(config.output_path, exist_ok=True)
 
     # list of tuples (class, config)
-    plugins: List[Type[Plugin]] = [
-        (importlib.import_module(f"plugins.{p}").PluginExport, c) for p,c in config.value("plugins").items()
-    ]
+    plugins: list[tuple[Type[Plugin], Any]] = []
+
+    for plugin_name, plugin_config_dict in config.plugins.items():
+        plugin = importlib.import_module(f"plugins.{plugin_name}").PluginExport
+        plugin_class = cast(type[Plugin], plugin)
+
+        try:
+            plugin_config = plugin_class.create_config(plugin_config_dict)
+        except ValidationError as err:
+            print(err)
+            sys.exit(1)
+
+        plugins.append((plugin_class, plugin_config))
 
     for p in plugins:
         log.info(f"Loaded plugin {p[0].get_name()}")
 
-    log.info(f"Checking services every {config.value('update_interval')} seconds")
+    log.info(f"Checking services every {config.update_interval} seconds")
 
     username_definition_re = re.compile(r"(?:(\w+)=)?([a-zA-Z0-9_\-]+)((?::\w+)*)")
 
     watches: Dict[str, UsernameDefinition] = {}
-    for streamer_definition in config.value("streamers"):
+    for streamer_definition in config.streamers:
         username_match = username_definition_re.match(streamer_definition)
 
         if username_match is None:
@@ -162,14 +178,14 @@ if __name__ == "__main__":
         log.info(f"Watching {username_definition.service} user {username_definition.username}")
 
     recorders: Dict[str, RecorderBase] = {} # mapping from userdef_id to recorder
-    last_check = 0
+    last_check = 0.0
 
     try:
         while True:
             streams_live = 0
 
-            if (time.time() - last_check >= config.value("update_interval")) or \
-               (recorder_is_finished(recorders) and time.time() - last_check >= config.value("update_end_interval")):
+            if (time.time() - last_check >= config.update_interval) or \
+               (recorder_is_finished(recorders) and time.time() - last_check >= config.update_end_interval):
                 # if there is a stream that just stopped quickly check the live status again
                 # -> if there was an error we can quickly restart the stream
                 # -> if the finished gracefully we prevent the stream from immediately restarting
@@ -187,7 +203,7 @@ if __name__ == "__main__":
                     is_live = services[username_definition.service].is_user_live(username_definition.username)
 
                     if username_id in recorders and (recorders[username_id].isInitialized() or recorders[username_id].encounteredError()) and not recorders[username_id].isRecording():
-                        stream_end_timeout_reached = (time.time() - recorders[username_id].getStopTime()) >= config.value("stream_end_timeout")
+                        stream_end_timeout_reached = (time.time() - recorders[username_id].getStopTime()) >= config.stream_end_timeout
 
                         if is_live: # continue recording
                             newRecorder = recorders[username_id].getFreshClone()

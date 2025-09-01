@@ -1,22 +1,37 @@
-from threading import Thread, Event
+from threading import Event
 import logging
-from datetime import datetime
 import os
 import sys
 import time
+from typing import Optional
 
 import pathvalidate
-import streamlink
 from streamlink.exceptions import StreamError
+from streamlink.session import Streamlink # type: ignore
+from streamlink.stream import Stream # type: ignore
 
 from lib.stream_metadata import StreamMetadata
 from lib.plugin_runner import PluginRunner
 from lib.recorder_base import RecorderBase
+from plugins.plugin_base import Plugin
 
 log = logging.getLogger(__file__)
 
 class TwitchRecorder(RecorderBase):
-    def __init__(self, username: str, quality: str, output_path: str, streamlink_options, plugins):
+    _username: str
+    _quality: str
+    _output_path: str
+    _streamlink_options: list[str]
+
+    _cloned: bool
+
+    _current_title: Optional[str]
+    _current_metadata: Optional[StreamMetadata]
+    _current_stream: Optional[Stream]
+    _recording_path: Optional[str]
+    _plugins: list[Plugin]
+
+    def __init__(self, username: str, quality: str, output_path: str, streamlink_options: list[str], plugins: list[tuple[type[Plugin], dict]]):
         super().__init__()
         self._launch_params = (username, quality, output_path, streamlink_options, plugins) # make it easier to create a fresh copy later in case we need one
 
@@ -28,7 +43,7 @@ class TwitchRecorder(RecorderBase):
         self._cloned = False
         
         self._current_title = None
-        self._current_metadata: StreamMetadata = None
+        self._current_metadata: Optional[StreamMetadata] = None
         self._current_stream = None
         self._recording_path = None
 
@@ -46,6 +61,11 @@ class TwitchRecorder(RecorderBase):
         return new_recorder
 
     def run(self) -> None:
+        if self._current_title is None:
+            raise Exception("Cannot run recorder without having set a title first")
+        if self._current_stream is None:
+            raise Exception("Cannot run recorder without having set a stream first")
+
         stream_fd = None
 
         try:
@@ -96,7 +116,7 @@ class TwitchRecorder(RecorderBase):
 
         log.info(f"Start recording of twitch user {self._username} with quality '{self._quality}'")
 
-        session = streamlink.Streamlink()
+        session = Streamlink()
 
         for option in self._streamlink_options:
             session.set_option(option[0], option[1])

@@ -1,11 +1,18 @@
+from typing import Optional
 from lib.stream_metadata import StreamMetadata
 
-class Plugin:
-    def __init__(self, config):
+class Plugin[C]:
+    _config: C
+
+    def __init__(self, config: C):
         self._config = config
 
     @staticmethod
-    def get_name():
+    def create_config(raw_config: dict) -> Optional[C]:
+        return None # abstract but optional to implement
+
+    @staticmethod
+    def get_name() -> str:
         return "Unnamed-Plugin"
 
     def handle_recording_start(self, stream_metadata: StreamMetadata, restart=False):

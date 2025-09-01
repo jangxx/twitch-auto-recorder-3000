@@ -1,8 +1,6 @@
 # Twitch Auto Recorder 3000
 A better way to automatically download streams from twitch as streamers go live.
 
-> Note: Due to this projects reliance on [streamlink](https://github.com/streamlink/streamlink), the recording functionality might break in the future if twitch decides to change their API again.
-
 Other services are also supported an can be used by prepending the service name to the username separated by an equals sign.
 
 Currently these services are supported:
@@ -10,12 +8,33 @@ Currently these services are supported:
 - `twitch`
 - `vrcdn`
 
-# Requirements
+## Running in docker
 
-- Python >=3.7
-- `ffmpeg` _if you want to use the ffmpeg plugin_
+The easiest way to run this script is by using docker:
 
-# Installation
+```
+docker run -v "./recordings:/data/recordings" -v "./config.yaml:/data/config.yaml" jangxx/twitch-auto-recorder-3000
+```
+
+This will put the recordings into a folder _./recordings_ and read the config from a file _config.yaml_, both in the current directory.
+You can also add launch arguments after the image name:
+
+```
+docker run -v "./recordings:/data/recordings" jangxx/twitch-auto-recorder-3000 --twitch-clientid <clientid> --twitch-secret <secret> -s <name-of-a-streamer>
+```
+
+The available launch arguments and config file options are outlined below.
+
+## Local installation
+
+If you don't want to use Docker, you can also install the script locally into a virtualenv.
+
+### Requirements
+
+- Python 3.13 (might work on older versions, but hasn't been tested)
+- `ffmpeg` _binary in PATH if you want to use the ffmpeg plugin_
+
+### Installation
 
 Clone this repositoy and create a new virtualenv in its directory.
 
@@ -42,13 +61,12 @@ pip install -r requirements.txt
 if you want to use the plugins, you also have to install their requirements as well:
 
 ```bash
-pip install setuptools==57.5.0 # optionally run this in case the next line fails
 pip install -r requirements-plugins.txt
 ```
 
-# Usage
+Afterwards you can run the script by executing `./venv/bin/python main.py` and adding some launch arguments.
 
-Activate the virtualenv and then run `python main.py` with some of these command line arguments:
+## Launch arguments & configuration file
 
 `-h, --help`  
 Show help message and exit.
@@ -119,7 +137,7 @@ stream_end_timeout: <time>
 
 Except for the plugin options, all configuration options can be set with command line arguments as well.
 
-# Plugins
+## Plugins
 
 Plugins can add some additional postprocessing to your recordings. Two plugins are included in the _plugins/_ directory, which serve as the examples on how to write your own.
 
