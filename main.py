@@ -113,9 +113,15 @@ for service_name, service in services.items():
         log.error(f"Failed to initialize service {service_name}: {e}")
 
 
-def recorder_is_finished(recorders: Dict[str, RecorderBase]):
+def is_any_recorder_finished(recorders: Dict[str, RecorderBase]):
     for recorder in recorders.values():
         if recorder.isFinished():
+            return True
+    return False
+
+def is_any_recorder_not_recording(recorders: Dict[str, RecorderBase]):
+    for recorder in recorders.values():
+        if not recorder.isRecording():
             return True
     return False
 
@@ -184,11 +190,12 @@ if __name__ == "__main__":
         while True:
             streams_live = 0
 
-            if (time.time() - last_check >= config.update_interval) or \
-               (recorder_is_finished(recorders) and time.time() - last_check >= config.update_end_interval):
-                # if there is a stream that just stopped quickly check the live status again
-                # -> if there was an error we can quickly restart the stream
-                # -> if the finished gracefully we prevent the stream from immediately restarting
+            if (time.time() - last_check >= config.update_interval) or is_any_recorder_finished(recorders) or \
+               (is_any_recorder_not_recording(recorders) and time.time() - last_check >= config.update_end_interval):
+                # check the live status if
+                # -> the update interval has passed
+                # -> any recorder has finished (we have to check immediately, since the finished recorder will get replaced immediately in the next step)
+                # -> any recorder is not recording (we have to check more often in this case so we can stop recorders quickly after the stream ended)
                 last_check = time.time()
 
                 for service_name, service in services.items():

@@ -92,8 +92,7 @@ The service is specified by writing it before the name separated by an equals si
 **Optional:** Update interval in seconds (Default: 120)
 
 `--update-end-interval <seconds>`  
-**Optional:** Update interval in seconds after a recording has stopped but before it is finished (Default: 10).  
-This option only comes into play if `stream_end_timeout` is also used.
+**Optional:** Update interval in seconds after a recording has stopped for any reason. This should be shorter than the normal interval, in case the stream APIs don't immediately return the proper non-live status which causes the script to retry the recording once per second (Default: 10)
 
 `--stream-end-timeout <seconds>`  
 **Optional:** Time to wait after a recording ended before considering the stream as finished (Default: 0)
