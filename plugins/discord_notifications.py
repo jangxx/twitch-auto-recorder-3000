@@ -20,7 +20,7 @@ class DiscordNotificationPlugin(Plugin):
 
     def _send_notification(self, message):
         try:
-            requests.post(self._config["webhook"], json={
+            requests.post(self._config.webhook, json={
                 "content": message,
             })
         except Exception as ex:
