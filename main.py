@@ -217,6 +217,7 @@ if __name__ == "__main__":
                             recorders[username_id] = newRecorder
                             services[username_definition.service].start_recorder(username_definition.username, newRecorder)
                         elif stream_end_timeout_reached:
+                            log.info(f"Finishing recorder for username {username_definition.username}, because the stream end timeout was reached")
                             recorders[username_id].finish()
                             del recorders[username_id] # remove finished recorders
 
