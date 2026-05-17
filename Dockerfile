@@ -1,9 +1,9 @@
-FROM python:3.13
+FROM python:3.13-trixie
 
 WORKDIR /opt/twitch-auto-recorder-3000
 
 RUN apt-get update
-RUN apt-get install -y ffmpeg build-essential
+RUN apt-get install -y ffmpeg build-essential chromium
 
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
