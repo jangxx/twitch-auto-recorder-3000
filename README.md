@@ -32,7 +32,7 @@ If you don't want to use Docker, you can also install the script locally into a 
 ### Requirements
 
 - Python 3.13 (might work on older versions, but hasn't been tested)
-- `ffmpeg` _binary in PATH if you want to use the ffmpeg plugin_
+- `ffmpeg` _binary in PATH_
 
 ### Installation
 
@@ -56,12 +56,6 @@ and then install the required packages:
 
 ```bash
 pip install -r requirements.txt
-```
-
-if you want to use the plugins, you also have to install their requirements as well:
-
-```bash
-pip install -r requirements-plugins.txt
 ```
 
 Afterwards you can run the script by executing `./venv/bin/python main.py` and adding some launch arguments.

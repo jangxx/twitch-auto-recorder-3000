@@ -8,9 +8,6 @@ RUN apt-get install -y ffmpeg build-essential chromium
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
-COPY requirements-plugins.txt ./
-RUN pip install -r requirements-plugins.txt
-
 COPY . .
 
 RUN mkdir -p /data/recordings
