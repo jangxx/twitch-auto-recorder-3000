@@ -33,32 +33,41 @@ If you don't want to use Docker, you can also install the script locally into a 
 
 - Python 3.13 (might work on older versions, but hasn't been tested)
 - `ffmpeg` _binary in PATH_
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 ### Installation
 
-Clone this repositoy and create a new virtualenv in its directory.
+Clone this repository and run the following command in its directory to create a virtualenv and install all dependencies:
 
-    python3 -m venv venv
+```bash
+uv sync
+```
 
-Activate the virtalenv
+Afterwards you can run the script using:
+
+```bash
+uv run main.py
+```
+
+Alternatively, activate the virtualenv first and then run the script directly.
+
+Activate the virtualenv
 
 _Linux, macOS_:
 
-    source venv/bin/activate
+    source .venv/bin/activate
 
 _Windows_:
 
-- Bash: `source venv/Scripts/activate`
-- Powershell: `.\venv\Scripts\activate`
-- CMD: `.\venv\Scripts\activate.bat`
+- Bash: `source .venv/Scripts/activate`
+- Powershell: `.\.venv\Scripts\Activate.ps1`
+- CMD: `.\.venv\Scripts\activate.bat`
 
-and then install the required packages:
+and then run:
 
 ```bash
-pip install -r requirements.txt
+python main.py
 ```
-
-Afterwards you can run the script by executing `./venv/bin/python main.py` and adding some launch arguments.
 
 ## Launch arguments & configuration file
 
