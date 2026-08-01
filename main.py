@@ -6,7 +6,8 @@ import re
 import importlib
 import sys
 import json
-from typing import Any, Dict, List, Type, cast
+from typing import Any, Dict, Type, cast
+import signal
 
 from pydantic import ValidationError
 import yaml
@@ -126,6 +127,8 @@ def is_any_recorder_not_recording(recorders: Dict[str, RecorderBase]):
     return False
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     if not os.path.exists(config.output_path):
         log.info(f"Output path {config.output_path} doesn't exist, creating it now...")
         os.makedirs(config.output_path, exist_ok=True)
