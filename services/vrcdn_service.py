@@ -2,6 +2,7 @@ from datetime import datetime
 import logging
 from typing import Dict, Iterable, List, Optional
 import asyncio
+import random
 import aiohttp
 
 from lib.config import Config
@@ -12,7 +13,9 @@ from services.vrcdn_recorder import VRCDNRecorder
 
 log = logging.getLogger(__file__)
 
-async def check_url(session: aiohttp.ClientSession, url: str):
+async def check_url(session: aiohttp.ClientSession, url: str, max_delay: float = 0):
+    if max_delay > 0:
+        await asyncio.sleep(random.uniform(0, max_delay))
     try:
         async with session.get(url) as resp:
             if resp.status == 200:
@@ -22,11 +25,11 @@ async def check_url(session: aiohttp.ClientSession, url: str):
     except:
         return False
 
-async def check_urls(urls: Dict[str, str]):
+async def check_urls(urls: Dict[str, str], max_delay: float = 0):
     timeout = aiohttp.ClientTimeout(total=5)
 
     async with aiohttp.ClientSession(timeout=timeout) as session:
-        results = { username: asyncio.ensure_future(check_url(session, url)) for username, url in urls.items() }
+        results = { username: asyncio.ensure_future(check_url(session, url, max_delay)) for username, url in urls.items() }
 
         await asyncio.gather(*results.values())
 
@@ -43,9 +46,11 @@ class VRCDNService(ServiceBase[VRCDNRecorder]):
 
         self._online_users = set()
         self._output_path = None
+        self._update_interval = 0
 
     def init(self, config: Config):
         self._output_path = config.output_path
+        self._update_interval = config.update_interval
 
         return True
     
@@ -57,7 +62,7 @@ class VRCDNService(ServiceBase[VRCDNRecorder]):
 
         urls = { username: f"https://stream.vrcdn.live/live/{username}.live.ts" for username in usernames }
 
-        users_live = asyncio.run(check_urls(urls))
+        users_live = asyncio.run(check_urls(urls, self._update_interval))
 
         for username, is_live in users_live.items():
             if is_live:

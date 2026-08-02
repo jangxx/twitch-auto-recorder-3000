@@ -101,6 +101,7 @@ class VRCDNRecorder(RecorderBase):
             pass
         except requests.HTTPError as e:
             log.error(f"Error while opening stream: {repr(e)}")
+            log.error(f"Response body: {e.response.text}")
             self._encountered_error = e
         except IOError as e:
             log.error(f"Error while starting recording: {repr(e)}")
