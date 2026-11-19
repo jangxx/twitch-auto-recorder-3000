@@ -18,7 +18,6 @@ from lib.username_definition import UsernameDefinition
 from plugins.plugin_base import Plugin
 from lib.config import Config, ConfigMerger, DefaultConfigDict, non_empty_dict_or_none
 from services.twitch_service import TwitchService
-from services.vrcdn_service import VRCDNService
 
 from _version import __version__
 
@@ -103,7 +102,6 @@ charset_normalizer_logger.setLevel(logging.CRITICAL)
 
 services: Dict[str, ServiceBase] = {
     "twitch": TwitchService(),
-    "vrcdn": VRCDNService(),
 }
 
 # init services

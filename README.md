@@ -1,12 +1,10 @@
 # Twitch Auto Recorder 3000
 A better way to automatically download streams from twitch as streamers go live.
 
-Other services are also supported an can be used by prepending the service name to the username separated by an equals sign.
-
-Currently these services are supported:
-
-- `twitch`
-- `vrcdn`
+> [!WARNING]
+> **VRCDN recording has been removed from this project.**
+> Recording VRCDN streams is now handled by a dedicated project: [vrcdn-auto-recorder-4000](https://github.com/jangxx/vrcdn-auto-recorder-4000).
+> If you were using `vrcdn=<username>` entries in your streamer list, please migrate to the new project. Those entries will now cause an "Invalid service" error on startup.
 
 ## Running in docker
 
@@ -32,7 +30,7 @@ If you don't want to use Docker, you can also install the script locally into a 
 ### Requirements
 
 - Python 3.13 (might work on older versions, but hasn't been tested)
-- `ffmpeg` _binary in PATH_
+- `ffmpeg` _binary in PATH if you want to use the ffmpeg_remux plugin_
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 ### Installation
